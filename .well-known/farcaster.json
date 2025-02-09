@@ -1,0 +1,18 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjI4MCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweGQwNUQ2MGI1NzYyNzI4NDY2QjQzZGQ5NGJBODgyRDA1MGI2MEFGNjcifQ",
+    "payload": "eyJkb21haW4iOiJ2cnlwYW4uZ2l0aHViLmlvIn0",
+    "signature": "MHg4YTk0OTVlY2E2MDhhMmM2Yjg5MGMxMzhkYmU2ZTE5NzIwOTZkNTE2OWZjYmUxODMyOWMxMzUzMTBmZDRhZDliNDljYTFiYmM0Yjc0NDhmMjA1Yzk4YTZmYTg5NWVkYWRmOWUzMTE0NTA0NTA3ZWM3OWNjZjdmMDA0ZTQ4N2IwOTFi"
+  },
+  "frame": {
+    "version": "1",
+    "name": "Example Frame",
+    "iconUrl": "https://vrypan.github.io/icon.png",
+    "homeUrl": "https://vrypan.github.io",
+    "imageUrl": "https://vrypan.github.io/image.png",
+    "buttonTitle": "Check this out",
+    "splashImageUrl": "https://vrypan.github.io/splash.png",
+    "splashBackgroundColor": "#eeccff",
+    "webhookUrl": "https://vrypan-mbp-m4.snowshoe-pirate.ts.net/"
+  }
+}
