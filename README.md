@@ -1,3 +1,5 @@
+![farma-git-social](https://github.com/user-attachments/assets/5678a1e7-09e3-4c45-8c13-930be4a6340f)
+
 # farma
 FArcaster Relationships MAnagement
 
