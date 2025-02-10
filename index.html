@@ -1,1 +1,65 @@
-Hello World
+<html>
+    <head>
+	<style>
+		body {
+    font-family: 'Inter', sans-serif; /* You can replace with another font like 'Roboto' or 'Lato' */
+    margin: 0;
+    padding: 40px;
+    background-color: #f8f8f8; /* Light background for a clean look */
+    color: #333; /* Dark gray text for readability */
+}
+
+h1, h2, h3 {
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+p {
+    line-height: 1.6;
+    max-width: 800px;
+}
+
+.container {
+    max-width: 900px;
+    margin: auto;
+}
+img {
+    max-width: 80%;
+    height: auto;
+    display: block;
+    margin: 20px auto; 
+}
+</style>
+        <meta property="og:description" content="Farcaster notification server" />
+        <meta property="og:title" content="farma" />
+        <meta property="og:image" content="https://farma.vrypan.net/og.png" />
+        <meta
+            property="fc:frame"
+            content='{
+                "version": "next",
+                "imageUrl": "https://farma.vrypan.net/og.png",
+                "button": {
+                    "title": "farma",
+                    "action": {
+                        "type": "launch_frame",
+                        "name": "Farma test frame",
+                        "url": "https://farma.vrypan.net/",
+                        "splashImageUrl": "https://farma.vrypan.net/logo.png",
+                        "splashBackgroundColor": "#012100"
+                    }
+                }
+            }'
+        />
+    </head>
+
+    <body>
+        <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk/dist/index.min.js"></script>
+        <script>
+            frame.sdk.actions.ready();
+            frame.sdk.actions.addFrame();
+        </script>
+        <p>This is a test frame. I will use it to test <a href="https://github.com/vrypan/farma/">github.com/vrypan/farma/</a>,
+	the Farcaster notification server.</p>
+	<img src="logo.png">
+    </body>
+</html>
