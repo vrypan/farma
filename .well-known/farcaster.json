@@ -7,12 +7,12 @@
   "frame": {
     "version": "1",
     "name": "farma - test frame",
-    "iconUrl": "https://farma.vrypan.net/icon.png",
+    "iconUrl": "https://farma.vrypan.net/app.png",
     "homeUrl": "https://farma.vrypan.net",
-    "imageUrl": "https://farma.vrypan.net/image.png",
+    "imageUrl": "https://farma.vrypan.net/og.png",
     "buttonTitle": "Check this out",
-    "splashImageUrl": "https://farma.vrypan.net/splash.png",
-    "splashBackgroundColor": "#eeccff",
-    "webhookUrl": "https://vrypan-mbp-m4.snowshoe-pirate.ts.net/"
+    "splashImageUrl": "https://farma.vrypan.net/logo.png",
+    "splashBackgroundColor": "#012100",
+    "webhookUrl": "https://vrypan-mbp-m4.snowshoe-pirate.ts.net/f/98e7af72-3400-4c6a-a031-8ca047368539"
   }
 }
