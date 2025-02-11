@@ -39,7 +39,7 @@ If you're using macOS, use `brew install vrypan/farma/farma`
 2. Run `farma setup`.
 
 3. Create a frame callbackUrl: `farma frame add <myframe> --url=<frame url>`.
-<myframe> is a short name used to identify your frame. The optional <frame url> is the URL of your frame.
+`<myframe>` is a short name used to identify your frame. The optional `<frame url>` is the URL of your frame.
 
 4. You will get a relative endpoint, something like `/f/a2b01541-778d-4a2b-9375-8232c70a6ddf`.
 You can use `farma frame ls` to see all your endpoints.
