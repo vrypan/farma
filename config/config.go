@@ -25,9 +25,9 @@ func Load() string { // Load config and return config file path
 	viper.SetConfigType("yaml")
 
 	defaults := map[string]interface{}{
-		"hub.host": "srv1.local",
+		"hub.host": "hoyt.farcaster.xyz",
 		"hub.port": "2283",
-		"hub.ssl":  "false",
+		"hub.ssl":  "true",
 	}
 	for key, value := range defaults {
 		viper.SetDefault(key, value)
