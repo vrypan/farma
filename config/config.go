@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var FIDR_VERSION string
+var FARMA_VERSION string
 
 // Initialize configuration using Viper
 func Load() string { // Load config and return config file path
