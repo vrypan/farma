@@ -27,4 +27,5 @@ go.work.sum
 .DS_Store
 tmp/
 vhs/
+dist/
 /farma

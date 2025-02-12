@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/vrypan/farma/config"
 )
 
 var rootCmd = &cobra.Command{
@@ -12,6 +13,7 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
+	config.Load()
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
