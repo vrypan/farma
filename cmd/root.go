@@ -8,7 +8,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "notif",
+	Use:   "farma",
 	Short: "A Farcaster notifications manager",
 }
 
