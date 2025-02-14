@@ -1,7 +1,7 @@
 HUBBLE_VER := "1.18.0"
 FIDR_VERSION := $(shell git describe --tags 2>/dev/null || echo "v0.0.0")
 
-all: 
+all:
 
 proto:
 	curl -s -L "https://github.com/farcasterxyz/hub-monorepo/archive/refs/tags/@farcaster/hubble@"${HUBBLE_VER}".tar.gz" \
@@ -20,6 +20,18 @@ local:
 	-ldflags "-X github.com/vrypan/farma/config.FIDR_VERSION=${FIRD_VERSION}" \
 	-o farma
 
+release-notes:
+	# Autmatically generate release_notes.md
+	./bin/generate_release_notes.sh
+
+tag:
+	./bin/auto_increment_tag.sh patch
+
+tag-minor:
+	./bin/auto_increment_tag.sh minor
+
+tag-major:
+	./bin/auto_increment_tag.sh major
+
 releases:
 	goreleaser release --clean
-
