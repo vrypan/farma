@@ -18,7 +18,8 @@ frames notifications.
 - [x] Support multiple frames and multiple clients per user
 - [x] Handle subscriptions/unsubscriptions
 - [x] Group FIDs in batches of 100 when sending notifications
-- [x] Handle Warpcast responses when sending notifications
+- [x] Handle invalidTokens
+- [ ] Handle rateLimitedTokens
 - [x] Validate subscription signatures
 - [x] Validate AppKeys used to sign subscription signatures
 - [x] Log user subscription/unsubscriptions
