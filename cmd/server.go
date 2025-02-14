@@ -8,6 +8,7 @@ import (
 	"regexp"
 
 	"github.com/spf13/cobra"
+	apiv1 "github.com/vrypan/farma/api"
 	"github.com/vrypan/farma/config"
 	"github.com/vrypan/farma/fctools"
 	db "github.com/vrypan/farma/localdb"
@@ -68,33 +69,31 @@ func server(cmd *cobra.Command, args []string) {
 	}
 }
 func ApiH(w http.ResponseWriter, r *http.Request) {
-	prefix := "/v1/api/"
+	prefix := "/api/v1/"
+	if r.URL.Path != prefix {
+		log.Printf("Invalid API endpoint: %s", r.URL.Path)
+		http.Error(w, "Invalid API endpoint", http.StatusNotFound)
+		return
+	}
 	log.Printf("API Call: %s", r.URL.Path)
 	body, err := io.ReadAll(r.Body)
-	path := r.URL.Path[len(prefix):]
 	if err != nil {
 		log.Printf("Error reading body: %v", err)
 		http.Error(w, "Error reading body", http.StatusInternalServerError)
 		return
 	}
-	api := utils.NewApi()
+	api := apiv1.New()
 	api.AddKey(config.GetString("key.public"))
 
-	if err = api.IsValid(path, string(body)); err != nil {
+	if err = api.Prepare(string(body)); err != nil {
 		log.Printf("Invalid API Call: %s", err)
 		return
 	} else {
 		log.Println("Request is valid")
 	}
-	/*/
-	path := strings.Split(r.URL.Path, "/")
-	switch path[2] {
-	case "notification":
-		log.Println("/notification/")
-	case "user":
-		log.Println("/user/")
-	}
-	*/
+	fmt.Println(api)
+	ret, err := api.Execute()
+	log.Println(ret, err)
 	w.WriteHeader(http.StatusOK)
 }
 func notificationsH(w http.ResponseWriter, r *http.Request) {

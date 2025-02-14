@@ -1,4 +1,4 @@
-package utils
+package api
 
 import (
 	"crypto/ed25519"
@@ -10,18 +10,17 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-var endpoints = map[string]struct{}{
-	"notification/send":   {},
-	"notification/status": {},
-}
-
 type Api struct {
-	PubKeys map[string]int // strings are hex, 0x prefixed
+	PubKeys     map[string]int
+	jsonHeader  map[string]interface{}
+	jsonPayload map[string]interface{}
 }
 
-func NewApi() *Api {
+func New() *Api {
 	return &Api{
-		PubKeys: make(map[string]int),
+		PubKeys:     make(map[string]int),
+		jsonHeader:  make(map[string]interface{}),
+		jsonPayload: make(map[string]interface{}),
 	}
 }
 
@@ -32,12 +31,7 @@ func (a *Api) AddKey(k string) {
 	a.PubKeys[k] = 1
 }
 
-func (a *Api) IsValid(endpoint string, payload string) error {
-	endpoint = strings.TrimSuffix(endpoint, "/")
-
-	if _, ok := endpoints[endpoint]; !ok {
-		return fmt.Errorf("Invalid endpoint: %s", endpoint)
-	}
+func (a *Api) Prepare(payload string) error {
 
 	var jsonBody, jsonHeader map[string]interface{}
 
@@ -75,5 +69,34 @@ func (a *Api) IsValid(endpoint string, payload string) error {
 	if !ed25519.Verify(common.FromHex(requestKey), signedDataBytes, signatureBytes) {
 		return fmt.Errorf("Invalid signature")
 	}
+
+	payloadBytes, err := base64.RawURLEncoding.DecodeString(signedData)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(payloadBytes, &a.jsonPayload)
+	if err != nil {
+		return err
+	}
+
+	a.jsonHeader = jsonHeader
+
+	// All checkc have passed. The signature has been validated.
+	// jsonPayload and jsonHeader are loaded with the corresponding JSON data.
+	// The API consumer can now call Execute() to run the command.
 	return nil
+}
+
+func (a Api) Execute() (string, error) {
+	switch a.jsonPayload["command"] {
+	case "notification/send":
+		params := a.jsonPayload["params"].(map[string]interface{})
+		Notify(
+			params["frame"].(string),
+			params["title"].(string),
+			params["body"].(string),
+			params["url"].(string),
+		)
+	}
+	return "", nil
 }
