@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log"
 
 	db "github.com/vrypan/farma/localdb"
 	"github.com/vrypan/farma/utils"
@@ -78,7 +79,10 @@ func Notify(frame string, title string, body string, url string) error {
 	}
 	if len(notificationRequests) > 0 {
 		for _, n := range notificationRequests {
-			n.Send()
+			if err = n.Send(); err != nil {
+				log.Println(err)
+			}
+
 		}
 	}
 	return nil

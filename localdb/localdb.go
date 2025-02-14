@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"strings"
 
 	"github.com/vrypan/farma/config"
 
@@ -93,12 +94,16 @@ func CreateTables() error {
 		CREATE INDEX idx_users_frames_ids ON users_frames (
 			user_id, frame_id
 		);
-		CREATE INDEX ids_users_frames_frame ON users_frames (
+		CREATE INDEX idx_users_frames_frame ON users_frames (
 			frame_id
 		);
-		CREATE INDEX ids_users_frames_user ON users_frames (
+		CREATE INDEX idx_users_frames_user ON users_frames (
 			user_id
 		);
+		CREATE INDEX idx_users_frames_token ON users_frames (
+			token
+		);
+
 		CREATE TABLE IF NOT EXISTS user_history (
 			id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 			user_id INTEGER NOT NULL,
@@ -186,6 +191,42 @@ func UpdateFrameStatus(
 
 	if execErr != nil {
 		return fmt.Errorf("Error while updating users_frames: %v", execErr)
+	}
+
+	err := tx.Commit()
+	stmt.Close()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func UpdateInvalidTokens(tokens []string) error {
+	AssertOpen()
+	params := strings.Join(strings.Split(strings.Repeat("?", len(tokens)), ""), ",")
+
+	tx, txErr := Instance.Begin()
+	if txErr != nil {
+		return fmt.Errorf("Error starting transaction: %v", txErr)
+	}
+
+	stmt, prepareErr := tx.Prepare(
+		fmt.Sprintf("UPDATE users_frames SET status=0, url='', token='' WHERE token IN (%s)", params),
+	)
+
+	if prepareErr != nil {
+		return fmt.Errorf("UpdateInvalidTokens - Error preparing statement: %v", prepareErr)
+	}
+
+	args := make([]interface{}, len(tokens))
+	for i, token := range tokens {
+		args[i] = token
+	}
+	_, execErr := stmt.Exec(args...)
+
+	if execErr != nil {
+		return fmt.Errorf("UpdateInvalidTokens - Error while updating users_frames: %v", execErr)
 	}
 
 	err := tx.Commit()

@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	db "github.com/vrypan/farma/localdb"
 )
+
 type NotificationRequest struct {
 	id        string
 	frameId   int
@@ -120,9 +121,9 @@ func (n NotificationRequest) Send() error {
 		if err == nil {
 			statusMap := make(map[string]string)
 			tokenStatuses := map[string][]string{
-				"Successful":     responseBody.Result.SuccessfulTokens,
-				"Invalid":        responseBody.Result.InvalidTokens,
-				"RateLimited":    responseBody.Result.RateLimitedTokens,
+				"Successful":  responseBody.Result.SuccessfulTokens,
+				"Invalid":     responseBody.Result.InvalidTokens,
+				"RateLimited": responseBody.Result.RateLimitedTokens,
 			}
 
 			for status, tokens := range tokenStatuses {
@@ -137,6 +138,11 @@ func (n NotificationRequest) Send() error {
 					statusMap[token] = status
 				}
 			}
+			err = db.UpdateInvalidTokens(tokenStatuses["Invalid"])
+			if err != nil {
+				return err
+			}
+
 			// TO DO: In the case of "RateLimited", users_frames status must be updated to 3
 
 		} else {
