@@ -25,7 +25,7 @@ var hub *fctools.FarcasterHub
 
 func init() {
 	rootCmd.AddCommand(serverCmd)
-	serverCmd.Flags().IntP("port", "", 8080, "HTTP port")
+	serverCmd.Flags().StringP("address", "a", ":8080", "Listen on this address.")
 }
 
 func serverLog(request *http.Request, response int, other string) {
@@ -49,6 +49,8 @@ func isValidPath(path string) bool {
 }
 
 func server(cmd *cobra.Command, args []string) {
+	serverAddr, _ := cmd.Flags().GetString("address")
+
 	err := db.Open()
 	if err != nil {
 		panic(err)
@@ -63,8 +65,8 @@ func server(cmd *cobra.Command, args []string) {
 	mux.HandleFunc("/", notificationsH)
 
 	//http.HandleFunc("/", notificationsH)
-	fmt.Println("Starting server on :8080")
-	if err := http.ListenAndServe(":8080", mux); err != nil {
+	fmt.Println("Starting server on", serverAddr)
+	if err := http.ListenAndServe(serverAddr, mux); err != nil {
 		fmt.Println("Server error:", err)
 	}
 }
