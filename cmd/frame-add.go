@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	db "github.com/vrypan/farma/localdb"
+	"github.com/vrypan/farma/utils"
 )
 
 var frameAddCmd = &cobra.Command{
@@ -46,13 +47,26 @@ func addFrame(cmd *cobra.Command, args []string) {
 		fmt.Fprintln(cmd.OutOrStderr(), "Name must be up to 32 characters")
 		os.Exit(1)
 	}
-	//sql := fmt.Sprintf("INSERT INTO frames (name, domain, endpoint) VALUES('%s','/frame/%s')", name, uuid)
-	_, err := db.Instance.Exec("INSERT INTO frames (name, domain, endpoint) VALUES(?,?,?)",
-		name, domain, endpoint,
-	)
-	if err != nil {
-		fmt.Fprintln(cmd.OutOrStderr(), "Error:", err)
+
+	f := utils.NewFrame()
+	err := f.FromName(name)
+	if err == nil {
+		fmt.Println("Frame already exists.")
 		os.Exit(1)
 	}
-	fmt.Println("Frame added")
+	if err != db.ERR_NOT_FOUND {
+		fmt.Println("Frame.FromName() failed.", err)
+		os.Exit(1)
+	}
+
+	f.Name = name
+	f.Domain = domain
+	f.Endpoint = endpoint
+	if err := f.Save(); err != nil {
+		fmt.Println("Frame.Save() failed.", err)
+		os.Exit(1)
+	}
+	fmt.Print(f)
+
+	fmt.Printf("Frame added sucessfully. Id=%d\n", f.Id)
 }

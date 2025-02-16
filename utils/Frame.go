@@ -4,41 +4,158 @@ import (
 	"fmt"
 
 	db "github.com/vrypan/farma/localdb"
+	"google.golang.org/protobuf/proto"
 )
-
-type Frame struct {
-	Id       int
-	Name     string
-	Desc     string
-	Domain   string
-	Endpoint string
-}
 
 func NewFrame() *Frame {
 	return &Frame{}
 }
 
-func (f *Frame) FromEndpoint(e string) error {
+func (f *Frame) Key(id uint64) string {
+	return fmt.Sprintf("f:id:%d", id)
+}
+
+func (f *Frame) Save() error {
 	db.AssertOpen()
 
-	rows, err := db.Instance.Query("SELECT id, name, desc, domain FROM frames where endpoint=?", e)
+	if f.Id == 0 {
+		id, err := db.FrameIdSequence.GetNext()
+		if err != nil {
+			return err
+		}
+		f.Id = id
+	}
+
+	key := f.Key(f.Id)
+	data, err := proto.Marshal(f)
 	if err != nil {
 		return err
 	}
 
-	if !rows.Next() {
-		return fmt.Errorf("Frame not found")
+	if err = db.Set([]byte(key), data); err != nil {
+		return err
 	}
 
-	if err = rows.Scan(&f.Id, &f.Name, &f.Desc, &f.Domain); err != nil {
-		return fmt.Errorf("Frame not found")
-	}
-	f.Endpoint = e
+	// In addition to f:id:<id>, we also save
+	// f:endpoint:<endpoint> and
+	// f:name:<name>
+	// This makes it very fast to find a Frame by endpoint or name
 
+	endpointKey := fmt.Sprintf("f:endpoint:%s", f.Endpoint)
+	if err = db.Set([]byte(endpointKey), []byte(key)); err != nil {
+		return err
+	}
+	nameKey := fmt.Sprintf("f:name:%s", f.Name)
+	if err = db.Set([]byte(nameKey), []byte(key)); err != nil {
+		return err
+	}
 	return nil
 }
 
-func (f Frame) Save() error {
-	/// TBA
+func (f *Frame) FromEndpoint(endpoint string) error {
+	db.AssertOpen()
+
+	refKey := fmt.Sprintf("f:endpoint:%s", endpoint)
+	key, err := db.Get([]byte(refKey))
+	if err != nil {
+		return err
+	}
+	frameBytes, err := db.Get(key)
+	if err != nil {
+		return err
+	}
+	return proto.Unmarshal(frameBytes, f)
+}
+
+// Checks the database and updates f if the frame already exists
+func (f *Frame) FromName(name string) error {
+	db.AssertOpen()
+
+	refKey := fmt.Sprintf("f:name:%s", name)
+	key, err := db.Get([]byte(refKey))
+	if err != nil {
+		return err
+	}
+	frameBytes, err := db.Get(key)
+	if err != nil {
+		return err
+	}
+	return proto.Unmarshal(frameBytes, f)
+}
+func (f *Frame) FromId(id uint64) *Frame {
+	db.AssertOpen()
+	key := f.Key(id)
+	data, err := db.Get([]byte(key))
+	if err != nil {
+		return nil
+	}
+	if proto.Unmarshal(data, f) != nil {
+		return nil
+	}
+	return f
+}
+
+func (f *Frame) Delete() error {
+	db.AssertOpen()
+
+	if f.Id == 0 {
+		return fmt.Errorf("Frame.Id=0")
+	}
+
+	key := f.Key(f.Id)
+	if err := db.Delete([]byte(key)); err != nil {
+		return err
+	}
+
+	endpointKey := fmt.Sprintf("f:endpoint:%s", f.Endpoint)
+	if err := db.Delete([]byte(endpointKey)); err != nil {
+		return err
+	}
+	nameKey := fmt.Sprintf("f:name:%s", f.Name)
+	if err := db.Delete([]byte(nameKey)); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (f *Frame) Update() error {
+	db.AssertOpen()
+
+	if f.Id == 0 {
+		return fmt.Errorf("Frame.Id=0")
+	}
+
+	key := f.Key(f.Id)
+	data, err := proto.Marshal(f)
+	if err != nil {
+		return err
+	}
+
+	if err = db.Set([]byte(key), data); err != nil {
+		return err
+	}
+
+	endpointKey := fmt.Sprintf("f:endpoint:%s", f.Endpoint)
+	if err = db.Set([]byte(endpointKey), []byte(key)); err != nil {
+		return err
+	}
+	nameKey := fmt.Sprintf("f:name:%s", f.Name)
+	if err = db.Set([]byte(nameKey), []byte(key)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func AllFrames() []*Frame {
+	db.AssertOpen()
+	res, _, _ := db.GetPrefixP([]byte("f:id:"), []byte("f:id:"), 1000)
+	frames := make([]*Frame, len(res))
+	for i, frameBytes := range res {
+		frame := NewFrame()
+		if proto.Unmarshal(frameBytes, frame) != nil {
+			return nil
+		}
+		frames[i] = frame
+	}
+	return frames
 }

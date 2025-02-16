@@ -133,10 +133,10 @@ func notificationsH(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	update := utils.NewNotificationUpdate(frame.Id).FromHttpEvent(body).GetAppFid(hub)
-	log.Println(update)
+	subsciption := utils.NewSubscription().FromHttpEvent(body).VerifyAppId(hub)
+	log.Println(subsciption)
 
-	if err = update.UpdateDb(); err != nil {
+	if err = subsciption.Save(); err != nil {
 		log.Println("Error updating db.", err)
 		serverLog(r, http.StatusInternalServerError, err.Error())
 		w.WriteHeader(http.StatusInternalServerError)

@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package utils;
+option go_package = "github.com/vrypan/farma/utils;utils";
+
+import "google/protobuf/timestamp.proto";
+
+message Frame {
+  uint64  id = 1;
+  string name = 2;
+  string domain = 3;
+  string endpoint = 4;
+}
+
+enum SubscriptionStatus {
+  UNKNOWN = 0;
+  UNSUBSCRIBED = 1;
+  SUBSCRIBED = 2;
+  RATE_LIMITED = 3;
+}
+enum EventType {
+    NONE = 0;
+    FRAME_ADDED = 1;
+	FRAME_REMOVED = 2;
+	NOTIFICATIONS_ENABLED = 3;
+	NOTIFICATIONS_DISABLED = 4;
+	NOTIFICATION_SENT = 5;
+	NOTIFICATION_FAILED_OTHER = 6;
+	NOTIFICATION_FAILED_INVALID = 7;
+	NOTIFICATION_FAILED_RATE_LIMIT = 8;
+}
+message Subscription {
+    uint64 frameId = 1;
+    uint64 userId = 2;
+    uint64 appId = 3;
+    SubscriptionStatus status = 4;
+    string url = 5;
+    string token = 6;
+    google.protobuf.Timestamp ctime = 7;
+    google.protobuf.Timestamp mtime = 8;
+    bytes signature = 9;
+    bool verified = 10;
+    bytes appKey = 11;
+}
+
+message UserLog {
+    uint64 frameId = 1;
+    uint64 userId = 2;
+    uint64 appId = 3;
+    EventType evtType = 4;
+    string eventContext = 5;
+    google.protobuf.Timestamp ctime = 7;
+}
+
+message Notification {
+    string id = 1;
+    string endpoint = 2;
+    string title = 3;
+    string message = 4;
+    string link = 5;
+    repeated string tokens = 6;
+    repeated string successTokens = 7;
+    repeated string failedTokens = 8;
+    repeated string rateLimitedTokens = 9;
+    google.protobuf.Timestamp ctime = 10;
+}

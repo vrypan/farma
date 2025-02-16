@@ -58,21 +58,8 @@ func setupFidr(cmd *cobra.Command, args []string) {
 	fmt.Printf(" > View/Edit your keypair in %s/%s\n", configDir, "farma.yaml")
 	fmt.Println()
 
-	dbPath := db.GetDbPath()
-	fmt.Printf("Database file is %s\n", dbPath)
-	if _, err := os.Stat(dbPath); err == nil {
-		fmt.Println(" > File already exists. Skipping.")
-	} else {
-		fmt.Println(" > Creating database...")
-		db.Open()
-		defer db.Close()
-		err := db.CreateTables()
-		if err != nil {
-			fmt.Printf(" > Error creating database: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Println(" > Database setup complete.")
-	}
+	dbPath := db.Path()
+	fmt.Printf("Database path is %s\n", dbPath)
 	fmt.Println()
 
 }
