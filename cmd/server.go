@@ -96,6 +96,8 @@ func ApiH(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(api)
 	ret, err := api.Execute()
 	log.Println(ret, err)
+	w.Write([]byte(ret))
+
 	w.WriteHeader(http.StatusOK)
 }
 func notificationsH(w http.ResponseWriter, r *http.Request) {
@@ -133,15 +135,16 @@ func notificationsH(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	subsciption := utils.NewSubscription().FromHttpEvent(body).VerifyAppId(hub)
-	log.Println(subsciption)
-
-	if err = subsciption.Save(); err != nil {
+	subscription := utils.NewSubscription().FromHttpEvent(body).VerifyAppId(hub)
+	subscription.FrameId = frame.Id
+	if err = subscription.Save(); err != nil {
 		log.Println("Error updating db.", err)
+		log.Println("Subscription details:", subscription.NiceString())
 		serverLog(r, http.StatusInternalServerError, err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	log.Println(subscription.NiceString())
 	serverLog(r, http.StatusOK, "")
 	w.WriteHeader(http.StatusOK)
 }

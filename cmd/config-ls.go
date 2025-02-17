@@ -38,7 +38,6 @@ func traverse(parent string, data map[string]interface{}) {
 	}
 }
 func config_ls(cmd *cobra.Command, args []string) {
-	//config.Load()
 	settings := viper.AllSettings()
 	traverse("", settings)
 

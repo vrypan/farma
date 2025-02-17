@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/vrypan/farma/fctools"
 	db "github.com/vrypan/farma/localdb"
@@ -14,54 +15,23 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-type UrlKey struct {
-	FrameId  uint64
-	UserId   uint64
-	Status   SubscriptionStatus
-	Endpoint string
-	Token    string
-}
-
-func (k UrlKey) FromSubscription(sub *Subscription) UrlKey {
-	return UrlKey{
-		FrameId:  sub.FrameId,
-		UserId:   sub.UserId,
-		Status:   sub.Status,
-		Endpoint: sub.Url,
-		Token:    sub.Token,
-	}
-}
-
-func (k UrlKey) String() string {
-	return fmt.Sprintf("s:url:%d:%d:%d:%s:%s", k.FrameId, k.UserId, k.Status.Number(), k.Endpoint, k.Token)
-}
-func (k UrlKey) Bytes() []byte {
-	return []byte(k.String())
-}
-func (k UrlKey) DecodeBytes(b []byte) UrlKey {
-	return k.DecodeString(string(b))
-}
-func (k UrlKey) DecodeString(s string) UrlKey {
-	parts := strings.Split(s, ":")
-	if len(parts) == 6 {
-		frameId, _ := strconv.ParseUint(parts[1], 10, 64)
-		userId, _ := strconv.ParseUint(parts[2], 10, 64)
-		status := SubscriptionStatus(SubscriptionStatus_value[parts[3]])
-		endpoint := parts[4]
-		token := parts[5]
-		return UrlKey{
-			FrameId:  frameId,
-			UserId:   userId,
-			Status:   status,
-			Endpoint: endpoint,
-			Token:    token,
-		}
-	}
-	return UrlKey{}
-}
-
 func NewSubscription() *Subscription {
 	return &Subscription{}
+}
+func (s *Subscription) NiceString() string {
+	return fmt.Sprintf(
+		"FrameId=%d UserId=%d AppId=%d Status=%s Url=%s Token=%s Ctime=%s Mtime=%s AppKey=%s Verified=%t",
+		s.FrameId,
+		s.UserId,
+		s.AppId,
+		s.Status.String(),
+		s.Url,
+		s.Token,
+		s.Ctime.AsTime().Format(time.RFC3339),
+		s.Mtime.AsTime().Format(time.RFC3339),
+		BytesToHex(s.AppKey),
+		s.Verified,
+	)
 }
 func (s *Subscription) Key(frameId, userId, appId uint64) string {
 	return fmt.Sprintf("s:id:%d:%d:%d", frameId, userId, appId)
@@ -93,8 +63,8 @@ func (s *Subscription) FromHttpEvent(data []byte) *Subscription {
 	var headerData map[string]interface{}
 
 	if err := json.Unmarshal(header, &headerData); err == nil {
-		s.UserId = headerData["fid"].(uint64)
-		s.AppKey = headerData["key"].([]byte)
+		s.UserId = uint64(headerData["fid"].(float64))
+		s.AppKey = HexToBytes(headerData["key"].(string))
 	}
 
 	var payloadData map[string]interface{}
@@ -199,7 +169,7 @@ func (s *Subscription) FromKeyBytes(key []byte) *Subscription {
 	return s
 }
 
-func (s *Subscription) GetFrame(frameId uint64, limit int) ([]*Subscription, []byte, error) {
+func SubscriptionsByFrame(frameId uint64, limit int) ([]*Subscription, []byte, error) {
 	prefix := fmt.Sprintf("s:id:%d:", frameId)
 	data, nextKey, err := db.GetPrefixP([]byte(prefix), []byte(prefix), limit)
 	if err != nil {
@@ -207,7 +177,11 @@ func (s *Subscription) GetFrame(frameId uint64, limit int) ([]*Subscription, []b
 	}
 	subscriptions := make([]*Subscription, len(data))
 	for i, subscription := range data {
-		proto.Unmarshal(subscription, subscriptions[i])
+		s := NewSubscription()
+		if err := proto.Unmarshal(subscription, s); err != nil {
+			return nil, nil, err
+		}
+		subscriptions[i] = s
 	}
 	return subscriptions, nextKey, nil
 }

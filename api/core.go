@@ -10,6 +10,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+type Response struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+	Data    any    `json:"data"`
+}
+
 type Api struct {
 	PubKeys     map[string]int
 	jsonHeader  map[string]interface{}
@@ -97,6 +103,13 @@ func (a Api) Execute() (string, error) {
 			params["body"].(string),
 			params["url"].(string),
 		)
+	case "frames/get":
+		params := a.jsonPayload["params"].(map[string]interface{})
+		if params["id"] != nil {
+			id := uint64(params["id"].(float64))
+			return GetFrame(id), nil
+		}
+		return GetFrames(), nil
 	}
 	return "", nil
 }

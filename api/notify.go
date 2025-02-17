@@ -10,8 +10,6 @@ import (
 
 // Send out notifications.
 func Notify(frameName string, notificationTitle string, notificationBody string, notificationUrl string) error {
-	db.Open()
-	defer db.Close()
 
 	frame := utils.NewFrame()
 	if frame.FromName(frameName) == nil {

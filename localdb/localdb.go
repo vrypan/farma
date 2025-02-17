@@ -170,11 +170,14 @@ func GetPrefixP(prefix []byte, startKey []byte, limit int) (items [][]byte, last
 		defer it.Close()
 
 		count := 0
+		var v []byte
 		for it.Seek(startKey); it.ValidForPrefix(prefix) && count < limit; it.Next() {
-			var v []byte
 			item := it.Item()
 			k := item.Key()
-			item.ValueCopy(v)
+			v, err = item.ValueCopy(nil)
+			if err != nil {
+				return err
+			}
 
 			items = append(items, v)
 			lastKey = k
