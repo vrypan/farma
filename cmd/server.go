@@ -49,7 +49,10 @@ func isValidPath(path string) bool {
 }
 
 func server(cmd *cobra.Command, args []string) {
-	serverAddr, _ := cmd.Flags().GetString("address")
+	serverAddr := config.GetString("host.addr")
+	if a, _ := cmd.Flags().GetString("address"); a != "" {
+		serverAddr = a
+	}
 
 	err := db.Open()
 	if err != nil {
@@ -64,13 +67,13 @@ func server(cmd *cobra.Command, args []string) {
 	mux.HandleFunc("/api/", ApiH)
 	mux.HandleFunc("/", notificationsH)
 
-	//http.HandleFunc("/", notificationsH)
 	fmt.Println("Starting server on", serverAddr)
 	if err := http.ListenAndServe(serverAddr, mux); err != nil {
 		fmt.Println("Server error:", err)
 	}
 }
 func ApiH(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	prefix := "/api/v1/"
 	if r.URL.Path != prefix {
 		log.Printf("Invalid API endpoint: %s", r.URL.Path)
@@ -135,7 +138,8 @@ func notificationsH(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	subscription := utils.NewSubscription().FromHttpEvent(body).VerifyAppId(hub)
+	subscription, eventType := utils.NewSubscription().FromHttpEvent(body)
+	subscription.VerifyAppId(hub)
 	subscription.FrameId = frame.Id
 	if err = subscription.Save(); err != nil {
 		log.Println("Error updating db.", err)
@@ -144,6 +148,15 @@ func notificationsH(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	ulog := utils.UserLog{
+		FrameId:      subscription.FrameId,
+		UserId:       subscription.UserId,
+		AppId:        subscription.AppId,
+		EvtType:      eventType,
+		EventContext: "",
+	}
+	err = ulog.Save()
+
 	log.Println(subscription.NiceString())
 	serverLog(r, http.StatusOK, "")
 	w.WriteHeader(http.StatusOK)

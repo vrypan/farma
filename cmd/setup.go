@@ -30,16 +30,12 @@ func setupFidr(cmd *cobra.Command, args []string) {
 		fmt.Printf("%v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("Config file is %s/%s\n", configDir, "farma.yaml")
-	fmt.Println(" > Make sure you edit it to set your hub.")
-	fmt.Println()
 
 	fmt.Println("Generating keys")
 	pubKeyHex := config.GetString("key.public")
 	privKeyHex := config.GetString("key.private")
-	if pubKeyHex != "" || privKeyHex != "" {
+	if pubKeyHex != "" {
 		fmt.Println(" > A key already exists. Not generarting a new one.")
-		fmt.Printf(" > Private key: %s\n", privKeyHex)
 		fmt.Printf(" > Public key: %s\n", pubKeyHex)
 	} else {
 		pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
@@ -52,7 +48,8 @@ func setupFidr(cmd *cobra.Command, args []string) {
 		fmt.Printf(" > Private key: %s\n", privKeyHex)
 		fmt.Printf(" > Public key: %s\n", pubKeyHex)
 		viper.Set("key.public", pubKeyHex)
-		viper.Set("key.private", privKeyHex)
+		//viper.Set("key.private", privKeyHex)
+		fmt.Println(" >>> Make sure you save your private key somewhere safe! <<<")
 		viper.WriteConfig()
 	}
 	fmt.Printf(" > View/Edit your keypair in %s/%s\n", configDir, "farma.yaml")
@@ -62,4 +59,7 @@ func setupFidr(cmd *cobra.Command, args []string) {
 	fmt.Printf("Database path is %s\n", dbPath)
 	fmt.Println()
 
+	fmt.Printf("The config file is %s/%s\n", configDir, "farma.yaml")
+	fmt.Println(" > You can edit it to change these values or use `fargo config`.")
+	fmt.Println()
 }
