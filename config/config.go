@@ -17,7 +17,7 @@ func Load() string { // Load config and return config file path
 	if err != nil {
 		log.Fatalf("Error getting config file: %v", err)
 	}
-	viper.SetEnvPrefix("FIDR")
+	viper.SetEnvPrefix("FARMA")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.SetConfigName("config")
