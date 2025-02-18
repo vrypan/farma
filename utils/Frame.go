@@ -17,11 +17,13 @@ func (f *Frame) Key(id uint64) string {
 
 func (f *Frame) Save() error {
 	db.AssertOpen()
-
 	if f.Id == 0 {
 		id, err := db.FrameIdSequence.GetNext()
-		if err != nil {
-			return err
+		if err != nil || id == 0 {
+			id, err = db.FrameIdSequence.GetNext()
+			if err != nil {
+				return err
+			}
 		}
 		f.Id = id
 	}

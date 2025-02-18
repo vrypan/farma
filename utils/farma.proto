@@ -49,7 +49,7 @@ message UserLog {
     uint64 appId = 3;
     EventType evtType = 4;
     string eventContext = 5;
-    google.protobuf.Timestamp ctime = 7;
+    google.protobuf.Timestamp ctime = 6;
 }
 
 message Notification {

@@ -9,21 +9,20 @@ import (
 )
 
 func (l *UserLog) Save() error {
-	db.AssertOpen()
+	now := timestamppb.Now()
+	key := fmt.Sprintf("l:user:%d:%d:%d", l.UserId, l.FrameId, now.Seconds)
+	l.Ctime = now
 	data, err := proto.Marshal(l)
 	if err != nil {
 		return err
 	}
-	now := timestamppb.Now()
-	key := fmt.Sprintf("l:user:%d:%d", l.UserId, now.Seconds)
-	l.Ctime = now
 	if err = db.Set([]byte(key), data); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (l *UserLog) LoadMany(limit int) ([]*UserLog, error) {
+func (l *UserLog) Load(limit int) ([]*UserLog, error) {
 	prefix := fmt.Sprintf("l:user:%d:", l.UserId)
 	data, _, err := db.GetPrefixP([]byte(prefix), []byte(prefix), limit)
 

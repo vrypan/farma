@@ -94,7 +94,7 @@ func Open() error {
 	if err != nil {
 		return err
 	}
-	FrameIdSequence = NewSequence("FrameId", 1)
+	FrameIdSequence = NewSequence("FrameId", 5)
 	if FrameIdSequence == nil {
 		return fmt.Errorf("Unable to initialize FrameIdSequence")
 	}
@@ -162,7 +162,7 @@ func GetKeys(prefix []byte, limit int) ([][]byte, error) {
 	return keys, err
 }
 
-// Each item in items[] is the unmarshaled value of the keys that match the prefix.
+// Each item in items[] is the value of the keys that match the prefix.
 // lastKey is the last key that was returned, which can be used as the next cursor.
 func GetPrefixP(prefix []byte, startKey []byte, limit int) (items [][]byte, lastKey []byte, err error) {
 	err = db.View(func(txn *badger.Txn) error {

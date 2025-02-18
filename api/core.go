@@ -16,6 +16,14 @@ type Response struct {
 	Data    any    `json:"data"`
 }
 
+func (r Response) String() string {
+	output, err := json.Marshal(r)
+	if err != nil {
+		return Error("JSON_ERROR", err)
+	}
+	return string(output)
+}
+
 func Error(message string, e error) string {
 	errResponse := Response{
 		Status:  "error",
@@ -151,6 +159,15 @@ func (a Api) Execute() (string, error) {
 		}
 	case "db/keys":
 		return DbKeys(), nil
+	case "logs/get":
+		userId := 0
+		limit := 1000
+		params := a.jsonPayload["params"].(map[string]interface{})
+		if params != nil && params["userId"] != nil && params["limit"] != nil {
+			userId = params["name"].(int)
+			limit = params["name"].(int)
+		}
+		return ShowLogs(uint64(userId), limit), nil
 	default:
 		return Error("INVALID_COMMAND", nil), nil
 	}

@@ -49,11 +49,11 @@ func DecodeKey(key []byte) *Subscription {
 	}
 	return s
 }
-func (s *Subscription) FromHttpEvent(data []byte) *Subscription {
+func (s *Subscription) FromHttpEvent(data []byte) (*Subscription, EventType) {
 	var jsonBody map[string]interface{}
 	if err := json.Unmarshal(data, &jsonBody); err != nil {
 		fmt.Println("Error decoding JSON:", err)
-		return s
+		return s, EventType_NONE
 	}
 
 	Signature, _ := base64.RawURLEncoding.DecodeString(jsonBody["signature"].(string))
@@ -68,10 +68,16 @@ func (s *Subscription) FromHttpEvent(data []byte) *Subscription {
 	}
 
 	var payloadData map[string]interface{}
+	evtType := EventType_NONE
 	if err := json.Unmarshal(payloadDecoded, &payloadData); err == nil {
 		eventName := payloadData["event"].(string)
 		switch eventName {
 		case "frame_added":
+			s.Status = SubscriptionStatus_SUBSCRIBED
+			if notifDetails, ok := payloadData["notificationDetails"].(map[string]interface{}); ok {
+				s.Url = notifDetails["url"].(string)
+				s.Token = notifDetails["token"].(string)
+			}
 		case "notifications_enabled":
 			s.Status = SubscriptionStatus_SUBSCRIBED
 			if notifDetails, ok := payloadData["notificationDetails"].(map[string]interface{}); ok {
@@ -79,14 +85,25 @@ func (s *Subscription) FromHttpEvent(data []byte) *Subscription {
 				s.Token = notifDetails["token"].(string)
 			}
 		case "frame_removed":
+			s.Status = SubscriptionStatus_UNSUBSCRIBED
 		case "notifications_disabled":
 			s.Status = SubscriptionStatus_UNSUBSCRIBED
+		}
+
+		eventNameToType := map[string]EventType{
+			"frame_added":            EventType_FRAME_ADDED,
+			"notifications_enabled":  EventType_NOTIFICATIONS_ENABLED,
+			"frame_removed":          EventType_FRAME_REMOVED,
+			"notifications_disabled": EventType_NOTIFICATIONS_DISABLED,
+		}
+		if eventType, ok := eventNameToType[eventName]; ok {
+			evtType = eventType
 		}
 	}
 
 	signed := []byte(jsonBody["header"].(string) + "." + jsonBody["payload"].(string))
 	s.Verified = ed25519.Verify(s.AppKey, signed, Signature)
-	return s
+	return s, evtType
 }
 
 func (s *Subscription) VerifyAppId(hub *fctools.FarcasterHub) *Subscription {
@@ -127,7 +144,7 @@ func (s *Subscription) Save() error {
 	if err = db.Set([]byte(subscriptionKey), data); err != nil {
 		return err
 	}
-	if oldTokenKey.String() != newTokenKey.String() {
+	if oldTokenKey.Token != newTokenKey.Token {
 		if oldTokenKey.Token != "" {
 			if err := db.Delete(oldTokenKey.Bytes()); err != nil {
 				return err
