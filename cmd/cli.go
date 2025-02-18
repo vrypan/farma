@@ -24,18 +24,30 @@ var cliCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(cliCmd)
+	cliCmd.Flags().StringP("url", "u", "config", "API endpoint. Defaults to host.addr/api/v1/ (from config file)")
 	cliCmd.Flags().BoolP("send", "s", false, "Send generated JSON to server")
 	cliCmd.Flags().BoolP("print", "p", true, "Print generated JSON request/response to stdout")
 }
 
 func cli(cmd *cobra.Command, args []string) {
+	serverAddr, err := cmd.Flags().GetString("url")
+	if err != nil || serverAddr == "config" {
+		serverAddr = "http://" + config.GetString("host.addr") + "/api/v1/"
+	}
 
+	if a, _ := cmd.Flags().GetString("address"); a != "" {
+		serverAddr = a
+	}
 	sendFlag, _ := cmd.Flags().GetBool("send")
 	printFlag, _ := cmd.Flags().GetBool("print")
 
 	config.Load()
 	keyPublic := config.GetString("key.public")
 	keyPrivate := config.GetString("key.private")
+	if keyPrivate == "" {
+		fmt.Println("No private key. Use \n$ farma config set key.private <private_key>\nor the environment variable FARMA_KEY_PRIVATE")
+		return
+	}
 	keyPrivateBytes, err := hex.DecodeString(keyPrivate[2:])
 	if err != nil {
 		fmt.Println("Error converting private key from hex:", err)
@@ -100,9 +112,9 @@ func cli(cmd *cobra.Command, args []string) {
 	}
 
 	if sendFlag {
-		server := "http://127.0.0.1:8080/api/v1/" // assuming "server" is the configuration key for the server URL
-		httpClient := &http.Client{}              // creating an HTTP client
-		reqBody := bytes.NewBuffer(requestJson)   // converting ret into a buffer for use as the request body
+		server := serverAddr
+		httpClient := &http.Client{}            // creating an HTTP client
+		reqBody := bytes.NewBuffer(requestJson) // converting ret into a buffer for use as the request body
 
 		req, err := http.NewRequest("POST", server, reqBody) // creating a POST request
 		if err != nil {

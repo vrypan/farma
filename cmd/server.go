@@ -22,10 +22,12 @@ var serverCmd = &cobra.Command{
 }
 
 var hub *fctools.FarcasterHub
+var verboseFlag bool
 
 func init() {
 	rootCmd.AddCommand(serverCmd)
-	serverCmd.Flags().StringP("address", "a", ":8080", "Listen on this address.")
+	serverCmd.Flags().StringP("address", "a", "", "Listen on this address.")
+	serverCmd.Flags().BoolP("verbose", "v", false, "Log additional info.")
 }
 
 func serverLog(request *http.Request, response int, other string) {
@@ -53,6 +55,7 @@ func server(cmd *cobra.Command, args []string) {
 	if a, _ := cmd.Flags().GetString("address"); a != "" {
 		serverAddr = a
 	}
+	verboseFlag, _ = cmd.Flags().GetBool("verbose")
 
 	err := db.Open()
 	if err != nil {
@@ -78,33 +81,32 @@ func ApiH(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != prefix {
 		log.Printf("Invalid API endpoint: %s", r.URL.Path)
 		http.Error(w, "Invalid API endpoint", http.StatusNotFound)
+		serverLog(r, http.StatusNotFound, "")
 		return
 	}
-	log.Printf("API Call: %s", r.URL.Path)
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("Error reading body: %v", err)
 		http.Error(w, "Error reading body", http.StatusInternalServerError)
+		serverLog(r, http.StatusInternalServerError, "")
 		return
 	}
 	api := apiv1.New()
 	api.AddKey(config.GetString("key.public"))
 
 	if err = api.Prepare(string(body)); err != nil {
-		log.Printf("Invalid API Call: %s", err)
+		msg := fmt.Sprintf("Invalid API Call: %s", err)
+		http.Error(w, msg, http.StatusInternalServerError)
 		return
-	} else {
-		log.Println("Request is valid")
 	}
-	fmt.Println(api)
 	ret, err := api.Execute()
-	log.Println(ret, err)
-	w.Write([]byte(ret))
 
 	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(ret))
+	serverLog(r, http.StatusOK, "")
+
 }
 func notificationsH(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%s", r.URL.Path)
 	// These are public endpoints that can and will be abused.
 	// Let's make sure that HTTP requests are within some reasonable limits.
 	if r.ContentLength > 1024 {
@@ -157,7 +159,9 @@ func notificationsH(w http.ResponseWriter, r *http.Request) {
 	}
 	err = ulog.Save()
 
-	log.Println(subscription.NiceString())
 	serverLog(r, http.StatusOK, "")
+	if verboseFlag {
+		log.Println(subscription.NiceString())
+	}
 	w.WriteHeader(http.StatusOK)
 }
