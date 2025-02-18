@@ -41,7 +41,7 @@ func (f *Frame) Save() error {
 	// f:name:<name>
 	// This makes it very fast to find a Frame by endpoint or name
 
-	endpointKey := fmt.Sprintf("f:endpoint:%s", f.Endpoint)
+	endpointKey := fmt.Sprintf("f:endpoint:%s", f.Webhook)
 	if err = db.Set([]byte(endpointKey), []byte(key)); err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func (f *Frame) Delete() error {
 		return err
 	}
 
-	endpointKey := fmt.Sprintf("f:endpoint:%s", f.Endpoint)
+	endpointKey := fmt.Sprintf("f:endpoint:%s", f.Webhook)
 	if err := db.Delete([]byte(endpointKey)); err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func (f *Frame) Update() error {
 		return err
 	}
 
-	endpointKey := fmt.Sprintf("f:endpoint:%s", f.Endpoint)
+	endpointKey := fmt.Sprintf("f:endpoint:%s", f.Webhook)
 	if err = db.Set([]byte(endpointKey), []byte(key)); err != nil {
 		return err
 	}

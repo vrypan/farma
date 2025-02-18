@@ -9,7 +9,7 @@ message Frame {
   uint64  id = 1;
   string name = 2;
   string domain = 3;
-  string endpoint = 4;
+  string webhook = 4;
 }
 
 enum SubscriptionStatus {

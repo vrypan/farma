@@ -16,6 +16,37 @@ type Response struct {
 	Data    any    `json:"data"`
 }
 
+func Error(message string, e error) string {
+	errResponse := Response{
+		Status:  "error",
+		Message: message,
+		Data:    e,
+	}
+	errOutput, err := json.Marshal(errResponse)
+	if err != nil {
+		return "{}"
+	}
+	return string(errOutput)
+}
+func (r Response) Format(status, message string, data interface{}) string {
+	r.Status = status
+	r.Message = message
+	r.Data = data
+	output, err := json.Marshal(r)
+	if err != nil {
+		errResponse := Response{
+			Status:  "error",
+			Message: err.Error(),
+		}
+		errOutput, err := json.Marshal(errResponse)
+		if err != nil {
+			return "{}"
+		}
+		return string(errOutput)
+	}
+	return string(string(output))
+}
+
 type Api struct {
 	PubKeys     map[string]int
 	jsonHeader  map[string]interface{}
@@ -97,19 +128,30 @@ func (a Api) Execute() (string, error) {
 	switch a.jsonPayload["command"] {
 	case "notification/send":
 		params := a.jsonPayload["params"].(map[string]interface{})
-		Notify(
+		r := Notify(
 			params["frame"].(string),
 			params["title"].(string),
 			params["body"].(string),
 			params["url"].(string),
 		)
+		return r, nil
 	case "frames/get":
 		params := a.jsonPayload["params"].(map[string]interface{})
 		if params["id"] != nil {
 			id := uint64(params["id"].(float64))
-			return GetFrame(id), nil
+			return FrameGet(id), nil
 		}
-		return GetFrames(), nil
+		return FramesGet(), nil
+	case "frames/add":
+		params := a.jsonPayload["params"].(map[string]interface{})
+		if params != nil && params["name"] != nil && params["domain"] != nil && params["webhook"] != nil {
+			return FrameAdd(params["name"].(string), params["domain"].(string), params["webhook"].(string)), nil
+		} else {
+			return Error("FRAME_MISSING_PARAMS", nil), nil
+		}
+	case "db/keys":
+		return DbKeys(), nil
+	default:
+		return Error("INVALID_COMMAND", nil), nil
 	}
-	return "", nil
 }

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/google/uuid"
 	db "github.com/vrypan/farma/localdb"
@@ -14,8 +13,9 @@ import (
 
 func NewNotification(title, message string, link string, endpoint string, urlKeys [][]byte) *Notification {
 	tokens := make([]string, len(urlKeys))
+	urlKey := UrlKey{}
 	for i, key := range urlKeys {
-		tokens[i] = strings.Split(string(key), ":")[3]
+		tokens[i] = urlKey.DecodeBytes(key).Token
 	}
 	return &Notification{
 		Id:       uuid.New().String(),
@@ -59,7 +59,6 @@ func (n *Notification) Send() error {
 			response.StatusCode, n.Endpoint, n.Tokens)
 	}
 
-	fmt.Println(string(jsonData))
 	bodyBytes, err := io.ReadAll(response.Body)
 	if err != nil {
 		return fmt.Errorf("Error reading response body: %w", err)
@@ -83,8 +82,8 @@ func (n *Notification) Send() error {
 	n.FailedTokens = responseBody.Result.InvalidTokens
 	n.RateLimitedTokens = responseBody.Result.RateLimitedTokens
 	for _, token := range n.SuccessTokens {
-		tokenKey := fmt.Sprintf("s:token:%s", token)
-		subscriptionKey, err := db.Get([]byte(tokenKey))
+		tokenKey := NewTokenKey(token)
+		subscriptionKey, err := db.Get(tokenKey.Bytes())
 		if err != nil {
 			return fmt.Errorf("Error getting subscription key: %w", err)
 		}
@@ -105,8 +104,8 @@ func (n *Notification) Send() error {
 		}
 	}
 	for _, token := range n.FailedTokens {
-		tokenKey := fmt.Sprintf("s:token:%s", token)
-		subscriptionKey, err := db.Get([]byte(tokenKey))
+		tokenKey := NewTokenKey(token)
+		subscriptionKey, err := db.Get(tokenKey.Bytes())
 		if err != nil {
 			return fmt.Errorf("Error getting subscription key: %v", err)
 		}
@@ -131,8 +130,8 @@ func (n *Notification) Send() error {
 		subscription.Save()
 	}
 	for _, token := range n.RateLimitedTokens {
-		tokenKey := fmt.Sprintf("s:token:%s", token)
-		subscriptionKey, err := db.Get([]byte(tokenKey))
+		tokenKey := NewTokenKey(token)
+		subscriptionKey, err := db.Get(tokenKey.Bytes())
 		if err != nil {
 			return fmt.Errorf("Error getting subscription key: %v", err)
 		}

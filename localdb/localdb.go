@@ -142,7 +142,7 @@ func Path() string {
 var Update = db.Update
 var View = db.View
 
-func GetPrefix(prefix []byte, limit int) ([][]byte, error) {
+func GetKeys(prefix []byte, limit int) ([][]byte, error) {
 	var keys [][]byte
 
 	err := db.View(func(txn *badger.Txn) error {
@@ -180,6 +180,27 @@ func GetPrefixP(prefix []byte, startKey []byte, limit int) (items [][]byte, last
 			}
 
 			items = append(items, v)
+			lastKey = k
+			count++
+		}
+		return nil
+	})
+
+	// Return keys and the last key as the next cursor
+	return items, lastKey, err
+}
+
+// Return the keys that match the prefix.
+// lastKey is the last key that was returned, which can be used as the next cursor.
+func GetKeysWithPrefix(prefix []byte, startKey []byte, limit int) (items [][]byte, lastKey []byte, err error) {
+	err = db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+		count := 0
+		for it.Seek(startKey); it.ValidForPrefix(prefix) && count < limit; it.Next() {
+			item := it.Item()
+			k := item.Key()
+			items = append(items, k)
 			lastKey = k
 			count++
 		}

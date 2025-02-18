@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 )
@@ -25,7 +26,7 @@ func (k UrlKey) FromSubscription(sub *Subscription) UrlKey {
 }
 
 func (k UrlKey) String() string {
-	return fmt.Sprintf("s:url:%d:%d:%d:%s:%s", k.FrameId, k.UserId, k.Status.Number(), k.Endpoint, k.Token)
+	return fmt.Sprintf("s:url:%d:%d:%d:%s:%s", k.FrameId, k.UserId, k.Status.Number(), url.QueryEscape(k.Endpoint), url.QueryEscape(k.Token))
 }
 func (k UrlKey) Bytes() []byte {
 	return []byte(k.String())
@@ -35,19 +36,20 @@ func (k UrlKey) DecodeBytes(b []byte) UrlKey {
 }
 func (k UrlKey) DecodeString(s string) UrlKey {
 	parts := strings.Split(s, ":")
-	if len(parts) == 6 {
-		frameId, _ := strconv.ParseUint(parts[1], 10, 64)
-		userId, _ := strconv.ParseUint(parts[2], 10, 64)
-		status := SubscriptionStatus(SubscriptionStatus_value[parts[3]])
-		endpoint := parts[4]
-		token := parts[5]
-		return UrlKey{
-			FrameId:  frameId,
-			UserId:   userId,
-			Status:   status,
-			Endpoint: endpoint,
-			Token:    token,
-		}
+	//if len(parts) == 7 {
+	frameId, _ := strconv.ParseUint(parts[2], 10, 64)
+	userId, _ := strconv.ParseUint(parts[3], 10, 64)
+	statusNum, _ := strconv.Atoi(parts[4])
+	status := SubscriptionStatus(statusNum)
+	endpoint, _ := url.QueryUnescape(parts[5])
+	token, _ := url.QueryUnescape(parts[6])
+	return UrlKey{
+		FrameId:  frameId,
+		UserId:   userId,
+		Status:   status,
+		Endpoint: endpoint,
+		Token:    token,
 	}
-	return UrlKey{}
+	//}
+	//return UrlKey{}
 }

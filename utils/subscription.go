@@ -100,19 +100,21 @@ func (s *Subscription) VerifyAppId(hub *fctools.FarcasterHub) *Subscription {
 func (s *Subscription) Save() error {
 	subscriptionKey := s.Key(s.FrameId, s.UserId, s.AppId)
 
-	newTokenKey := fmt.Sprintf("s:token:%s", s.Token)
-	oldTokenKey := ""
+	newTokenKey := NewTokenKey(s.Token)
+	oldTokenKey := TokenKey{}
 
 	newUrlKey := UrlKey{}.FromSubscription(s)
 	oldUrlKey := UrlKey{}
 
-	if s.Ctime == nil {
+	if s.Ctime == nil || (s.Ctime.Seconds == 0 && s.Ctime.Nanos == 0) {
 		tmp := NewSubscription().FromKey(s.FrameId, s.UserId, s.AppId)
 		if tmp != nil {
 			// If Subscription was already saved in DB
 			s.Ctime = tmp.Ctime // Inherit ctime
-			oldTokenKey = fmt.Sprintf("s:token:%s", tmp.Token)
+			oldTokenKey = NewTokenKey(tmp.Token)
 			oldUrlKey = oldUrlKey.FromSubscription(tmp)
+		} else {
+			s.Ctime = timestamppb.Now()
 		}
 	}
 	s.Mtime = timestamppb.Now()
@@ -125,17 +127,17 @@ func (s *Subscription) Save() error {
 	if err = db.Set([]byte(subscriptionKey), data); err != nil {
 		return err
 	}
-	if oldTokenKey != newTokenKey {
-		if oldTokenKey != "" {
-			if err := db.Delete([]byte(oldTokenKey)); err != nil {
+	if oldTokenKey.String() != newTokenKey.String() {
+		if oldTokenKey.Token != "" {
+			if err := db.Delete(oldTokenKey.Bytes()); err != nil {
 				return err
 			}
 			if err := db.Delete(oldUrlKey.Bytes()); err != nil {
 				return err
 			}
 		}
-		if newTokenKey != "" {
-			if err := db.Set([]byte(newTokenKey), []byte(subscriptionKey)); err != nil {
+		if newTokenKey.Token != "" {
+			if err := db.Set(newTokenKey.Bytes(), []byte(subscriptionKey)); err != nil {
 				return err
 			}
 			if err := db.Set(newUrlKey.Bytes(), []byte(subscriptionKey)); err != nil {

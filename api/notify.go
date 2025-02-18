@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"strconv"
 
 	db "github.com/vrypan/farma/localdb"
@@ -9,26 +8,27 @@ import (
 )
 
 // Send out notifications.
-func Notify(frameName string, notificationTitle string, notificationBody string, notificationUrl string) error {
-
+func Notify(frameName string, notificationTitle string, notificationBody string, notificationUrl string) string {
+	response := Response{}
 	frame := utils.NewFrame()
-	if frame.FromName(frameName) == nil {
-		fmt.Println("Frame not found")
-		return fmt.Errorf("Frame not found")
+	if frame.FromName(frameName) != nil {
+		return response.Format("error", "FRAME_NOT_FOUND", nil)
 	}
-	fmt.Println(frame)
+
+	// Warpcast will crash when an notificationUrl is clicked.
+	if notificationUrl == "" {
+		notificationUrl = "https://" + frame.Domain
+	}
 
 	keys := make(map[string][][]byte)
 
-	prefix := []byte("s:url:" + strconv.Itoa(int(frame.GetId())) + ":")
+	prefix := []byte("s:url:" + strconv.Itoa(int(frame.Id)) + ":")
+
 	startKey := prefix
 	for {
-		urlKeys, nextKey, err := db.GetPrefixP(prefix, startKey, 1000)
+		urlKeys, nextKey, err := db.GetKeysWithPrefix(prefix, startKey, 1000)
 		if err != nil {
-			return fmt.Errorf("Error fetching subscriptions: %v", err)
-		}
-		if len(urlKeys) < 1000 {
-			break
+			return Error("DB_ERROR", err)
 		}
 		for _, urlKeyBytes := range urlKeys {
 			urlKey := utils.UrlKey{}.DecodeBytes(urlKeyBytes)
@@ -40,7 +40,11 @@ func Notify(frameName string, notificationTitle string, notificationBody string,
 			}
 		}
 		startKey = nextKey
+		if len(urlKeys) < 1000 {
+			break
+		}
 	}
+
 	for url, urlKeys := range keys {
 		notification := utils.NewNotification(
 			notificationTitle,
@@ -50,7 +54,9 @@ func Notify(frameName string, notificationTitle string, notificationBody string,
 			urlKeys,
 		)
 		err := notification.Send()
-		fmt.Printf("Notification %s sent with result %v\n", notification.Id, err)
+		if err != nil {
+			return Error("NOTIFICATION_ERROR", err)
+		}
 	}
-	return nil
+	return response.Format("SUCCESS", "Notification sent", nil)
 }
