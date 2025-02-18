@@ -42,7 +42,7 @@ func cli(cmd *cobra.Command, args []string) {
 	printFlag, _ := cmd.Flags().GetBool("print")
 
 	config.Load()
-	keyPublic := config.GetString("key.public")
+	//keyPublic := config.GetString("key.public")
 	keyPrivate := config.GetString("key.private")
 	if keyPrivate == "" {
 		fmt.Println("No private key. Use \n$ farma config set key.private <private_key>\nor the environment variable FARMA_KEY_PRIVATE")
@@ -53,10 +53,15 @@ func cli(cmd *cobra.Command, args []string) {
 		fmt.Println("Error converting private key from hex:", err)
 		return
 	}
+
+	keyPublic := hex.EncodeToString(
+		ed25519.PrivateKey(keyPrivateBytes).Public().(ed25519.PublicKey),
+	)
 	if len(args) == 0 {
 		fmt.Println("No payload")
 		return
 	}
+
 	payload := args[0]
 	if args[0] == "-" {
 		var buffer bytes.Buffer
