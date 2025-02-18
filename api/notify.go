@@ -46,6 +46,7 @@ func Notify(frameName string, notificationTitle string, notificationBody string,
 	}
 
 	notificationId := ""
+	notificationCount := 0
 	for url, urlKeys := range keys {
 		notification := utils.NewNotification(
 			notificationId,
@@ -56,10 +57,26 @@ func Notify(frameName string, notificationTitle string, notificationBody string,
 			urlKeys,
 		)
 		notificationId = notification.Id
+		notificationCount += len(urlKeys)
 		err := notification.Send()
 		if err != nil {
 			return Error("NOTIFICATION_ERROR", err)
 		}
 	}
-	return response.Format("SUCCESS", "Notification sent", nil)
+
+	/*fmt.Println("NotificationId", notificationId)
+	fmt.Println("NotificationCount", notificationCount)
+	fmt.Println("Data:", data)
+	*/
+	return response.Format(
+		"SUCCESS",
+		"Notification sent",
+		struct {
+			NotificationId string
+			Count          int
+		}{
+			NotificationId: notificationId,
+			Count:          notificationCount,
+		},
+	)
 }

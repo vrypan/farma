@@ -39,10 +39,10 @@ func (s *Subscription) Key(frameId, userId, appId uint64) string {
 func DecodeKey(key []byte) *Subscription {
 	s := &Subscription{}
 	parts := strings.Split(string(key), ":")
-	if len(parts) == 4 {
-		frameId, _ := strconv.ParseUint(parts[1], 10, 64)
-		userId, _ := strconv.ParseUint(parts[2], 10, 64)
-		appId, _ := strconv.ParseUint(parts[3], 10, 64)
+	if len(parts) == 5 {
+		frameId, _ := strconv.ParseUint(parts[2], 10, 64)
+		userId, _ := strconv.ParseUint(parts[3], 10, 64)
+		appId, _ := strconv.ParseUint(parts[4], 10, 64)
 		s.FrameId = frameId
 		s.UserId = userId
 		s.AppId = appId

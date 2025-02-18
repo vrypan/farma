@@ -52,7 +52,7 @@ func (r Response) Format(status, message string, data interface{}) string {
 		}
 		return string(errOutput)
 	}
-	return string(string(output))
+	return string(output)
 }
 
 type Api struct {
