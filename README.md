@@ -52,21 +52,12 @@ If you're using macOS, use `brew install vrypan/farma/farma`
 4. Configure a frame. You will need a short name for your frame, and the frame domain.
 
 Assuming you want to call your frame `myframe`, and that its domain is `farma.vrypan.net`, you have to run:
-
-```
-echo '{"command": "frames/add","params": {"name":"myframe","domain":"farma.vrypan.net"}}' \
-| farma cli - --print --send | jq
-```
+`farma frame-add myframe farma.vrypan.net`
 
 5. You will get a relative endpoint, something like `/f/a2b01541-778d-4a2b-9375-8232c70a6ddf`.
 
 You can use this to get all frames and endpoints configured:
-
-```
-echo '{"command": "frames/get","params": {}}' \
-| farma cli - --print --send | jq
-```
-You can use `farma frame ls` to see all your endpoints.
+`farma frames-list`
 
 6. Add the endpoint (including your server name) in the frame's `.well-known/farcaster.json` callbackUrl.
 
