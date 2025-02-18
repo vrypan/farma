@@ -26,7 +26,7 @@ frames notifications.
 - [ ] Installation instructions
 - [ ] Support access to nodes that require authentication
 - [ ] Guide admins on how to use the commands, add checks
-- [ ] Expose REST API
+- [x] Expose REST API (basic functionality)
 - [ ] Webhooks?
 - [ ] Log notifications sent
 
@@ -39,14 +39,48 @@ If you're using macOS, use `brew install vrypan/farma/farma`
 
 2. Run `farma setup`.
 
-3. Create a frame callbackUrl: `farma frame add <myframe> --url=<frame url>`.
-`<myframe>` is a short name used to identify your frame. The optional `<frame url>` is the URL of your frame.
+  Make sure you save the private key.
 
-4. You will get a relative endpoint, something like `/f/a2b01541-778d-4a2b-9375-8232c70a6ddf`.
+  If you are ok with it being in plain text in the config file, use
+  `farma config set key.private <private_key>` to save it there.
+
+  Alternatively, you can `export FARMA_KEY_PRIVATE=<private_key>` to avoid haveing to pass it manually
+  to the following commands.
+
+3. Start the farma server: `farma server`
+
+4. Configure a frame. You will need a short name for your frame, and the frame domain.
+
+Assuming you want to call your frame `myframe`, and that its domain is `farma.vrypan.net`, you have to run:
+
+```
+echo '{"command": "frames/add","params": {"name":"myframe","domain":"farma.vrypan.net"}}' \
+| farma cli - --print --send | jq
+```
+
+5. You will get a relative endpoint, something like `/f/a2b01541-778d-4a2b-9375-8232c70a6ddf`.
+
+You can use this to get all frames and endpoints configured:
+
+```
+echo '{"command": "frames/get","params": {}}' \
+| farma cli - --print --send | jq
+```
 You can use `farma frame ls` to see all your endpoints.
 
-5. Add the endpoint (including your server name) in the frame's `.well-known/farcaster.json` callbackUrl.
+6. Add the endpoint (including your server name) in the frame's `.well-known/farcaster.json` callbackUrl.
 
-6. Start the farma server: `farma server`.
+For example,
 
-7. You can send a notification to all users subscribed to a frame, using `farma notify <frame name>`.
+```
+"webhookUrl": "https://my-frame-notifications.com/f/a2b01541-778d-4a2b-9375-8232c70a6ddf"
+```
+
+**Make sure you re-validate the frame in Warpcast dev tools.**
+
+7. You can send a notification to all users subscribed to a frame, using:
+
+```
+echo '{"command": "notification/send","params": {"frame":"farma","title":"Hello","body":"Hello, there!", "url":""}}' \
+| farma cli - -p -s | jq
+```
