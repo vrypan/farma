@@ -26,7 +26,7 @@ func ShowLogs(userId uint64, limit int) string {
 		logs[i] = &logProto
 	}
 	response := Response{
-		Status:  "OK",
+		Status:  "SUCCESS",
 		Message: "User logs",
 		Data:    logs,
 	}

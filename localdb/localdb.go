@@ -94,7 +94,10 @@ func Open() error {
 	if err != nil {
 		return err
 	}
-	FrameIdSequence = NewSequence("FrameId", 5)
+	// This sequence is used when adding a new frame to the database
+	// This is an operation that happens rarely, so i't ok to reserve
+	// only one Id, and play the cost of fetching new ones when needed.
+	FrameIdSequence = NewSequence("FrameId", 1)
 	if FrameIdSequence == nil {
 		return fmt.Errorf("Unable to initialize FrameIdSequence")
 	}

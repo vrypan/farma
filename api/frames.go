@@ -12,7 +12,7 @@ func FramesGet() string {
 	frames := utils.AllFrames()
 	response := Response{}
 	response.Data = frames
-	response.Status = "success"
+	response.Status = "SUCCESS"
 	response.Message = "Frames retrieved successfully"
 	output, err := json.Marshal(response)
 	if err != nil {
@@ -26,7 +26,7 @@ func FrameGet(id uint64) string {
 	response := Response{}
 	response.Data = frame
 	if frame == nil {
-		response.Status = "error"
+		response.Status = "ERROR"
 		response.Message = "FRAME_NOT_FOUND"
 		output, err := json.Marshal(response)
 		if err != nil {
@@ -34,11 +34,11 @@ func FrameGet(id uint64) string {
 		}
 		return string(output)
 	}
-	response.Status = "success"
+	response.Status = "SUCCESS"
 	response.Message = "Frame retrieved successfully"
 	output, err := json.Marshal(response)
 	if err != nil {
-		return response.Format("error", "ERROR_JSON_MARSHAL", err)
+		return response.Format("ERROR", "ERROR_JSON_MARSHAL", err)
 	}
 	return string(output)
 }
