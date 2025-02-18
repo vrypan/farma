@@ -1,5 +1,5 @@
 HUBBLE_VER := "1.18.0"
-FIDR_VERSION := $(shell git describe --tags 2>/dev/null || echo "v0.0.0")
+FARMA_VER := $(shell git describe --tags 2>/dev/null || echo "v0.0.0")
 
 all:
 
@@ -13,17 +13,19 @@ farcaster-go: $(wildcard schemas/*.proto)
 	--go-grpc_out=. \
 	schemas/*.proto
 
-local:
-	@echo Building farma v${FIDR_VERSION}
+local: utils/farma.pb.go
+	@echo Building farma v${FARMA_VER}
 	go build \
 	-ldflags "-w -s" \
-	-ldflags "-X github.com/vrypan/farma/config.FIDR_VERSION=${FIRD_VERSION}" \
+	-ldflags "-X github.com/vrypan/farma/config.FARMA_VERSION=${FARMA_VER}" \
 	-o farma
 
 release-notes:
 	# Autmatically generate release_notes.md
 	./bin/generate_release_notes.sh
 
+utils/farma.pb.go:
+	protoc --go_out=./utils --go_opt=paths=source_relative --proto_path=./utils utils/farma.proto
 tag:
 	./bin/auto_increment_tag.sh patch
 
@@ -33,5 +35,5 @@ tag-minor:
 tag-major:
 	./bin/auto_increment_tag.sh major
 
-releases:
+releases: utils/farma.pb.go
 	goreleaser release --clean
