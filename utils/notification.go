@@ -11,14 +11,25 @@ import (
 	db "github.com/vrypan/farma/localdb"
 )
 
-func NewNotification(title, message string, link string, endpoint string, urlKeys [][]byte) *Notification {
+func NewNotification(
+	id string,
+	title string,
+	message string,
+	link string,
+	endpoint string,
+	urlKeys [][]byte,
+) *Notification {
+
 	tokens := make([]string, len(urlKeys))
 	urlKey := UrlKey{}
 	for i, key := range urlKeys {
 		tokens[i] = urlKey.DecodeBytes(key).Token
 	}
+	if id == "" {
+		id = uuid.New().String()
+	}
 	return &Notification{
-		Id:       uuid.New().String(),
+		Id:       id,
 		Endpoint: endpoint,
 		Title:    title,
 		Message:  message,

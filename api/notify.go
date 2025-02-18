@@ -45,14 +45,17 @@ func Notify(frameName string, notificationTitle string, notificationBody string,
 		}
 	}
 
+	notificationId := ""
 	for url, urlKeys := range keys {
 		notification := utils.NewNotification(
+			notificationId,
 			notificationTitle,
 			notificationBody,
 			notificationUrl,
 			url,
 			urlKeys,
 		)
+		notificationId = notification.Id
 		err := notification.Send()
 		if err != nil {
 			return Error("NOTIFICATION_ERROR", err)
