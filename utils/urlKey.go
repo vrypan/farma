@@ -5,6 +5,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	db "github.com/vrypan/farma/localdb"
 )
 
 type UrlKey struct {
@@ -52,4 +54,22 @@ func (k UrlKey) DecodeString(s string) UrlKey {
 	}
 	//}
 	//return UrlKey{}
+}
+
+func (k UrlKey) Set(subscriptionKey []byte) error {
+	// First delete any UrlKeys with an other Status.
+	// (Status is part of the key.)
+	for status := range SubscriptionStatus_name {
+		if status != int32(k.Status.Number()) {
+			tmp := k
+			tmp.Status = SubscriptionStatus(status)
+			db.Delete(tmp.Bytes())
+		}
+	}
+	err := db.Set(k.Bytes(), subscriptionKey)
+	return err
+}
+
+func (k UrlKey) Get() ([]byte, error) {
+	return db.Get(k.Bytes())
 }

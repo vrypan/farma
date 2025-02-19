@@ -139,6 +139,8 @@ func (n *Notification) Send() error {
 		subscription.Status = SubscriptionStatus_UNSUBSCRIBED
 		subscription.Token = ""
 		subscription.Save()
+		urlKey := UrlKey{}.FromSubscription(subscription)
+		urlKey.Set(subscriptionKey)
 	}
 	for _, token := range n.RateLimitedTokens {
 		tokenKey := NewTokenKey(token)
@@ -164,6 +166,8 @@ func (n *Notification) Send() error {
 		subscription.FromKeyBytes(subscriptionKey)
 		subscription.Status = SubscriptionStatus_RATE_LIMITED
 		subscription.Save()
+		urlKey := UrlKey{}.FromSubscription(subscription)
+		urlKey.Set(subscriptionKey)
 	}
 	return nil
 }
