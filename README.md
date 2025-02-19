@@ -13,6 +13,14 @@ frames notifications.
 - When did they enable/disable notifications
 - Which Farcaster clients are they using to interact with your frame?
 
+# Features
+- Small footprint, fast, no external dependencies (but you will need access to a read hub).
+- Supports multiple frames.
+- Supports multiple Farcaster apps.
+- Keeps track of subscription activity per user (frame added/removed, notifications enabled/disabled, notifications sent).
+- Updates user subscription status based on notification replies from the app (success, rate limited, invalid tokens).
+- Allows batch sending notifications to all users subscribed to a frame.
+
 # Setup
 
 (This will improve a lot, but in case someone wants to give it an early try.)
