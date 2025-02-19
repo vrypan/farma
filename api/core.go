@@ -26,9 +26,9 @@ func (r Response) String() string {
 
 func Error(message string, e error) string {
 	errResponse := Response{
-		Status:  "error",
+		Status:  "ERROR",
 		Message: message,
-		Data:    e,
+		Data:    e.Error(),
 	}
 	errOutput, err := json.Marshal(errResponse)
 	if err != nil {

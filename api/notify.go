@@ -12,7 +12,7 @@ func Notify(frameName string, notificationTitle string, notificationBody string,
 	response := Response{}
 	frame := utils.NewFrame()
 	if frame.FromName(frameName) != nil {
-		return response.Format("error", "FRAME_NOT_FOUND", nil)
+		return response.Format("ERROR", "FRAME_NOT_FOUND", nil)
 	}
 
 	// Warpcast will crash when an notificationUrl is clicked.

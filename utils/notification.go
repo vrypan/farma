@@ -96,7 +96,7 @@ func (n *Notification) Send() error {
 		tokenKey := NewTokenKey(token)
 		subscriptionKey, err := db.Get(tokenKey.Bytes())
 		if err != nil {
-			return fmt.Errorf("Error getting subscription key: %w", err)
+			return fmt.Errorf("Error getting subscription key for %s: %s", tokenKey, err)
 		}
 		if subscriptionKey == nil {
 			return fmt.Errorf("Subscription key not found for token: %s", token)
@@ -118,7 +118,7 @@ func (n *Notification) Send() error {
 		tokenKey := NewTokenKey(token)
 		subscriptionKey, err := db.Get(tokenKey.Bytes())
 		if err != nil {
-			return fmt.Errorf("Error getting subscription key: %v", err)
+			return fmt.Errorf("Error getting subscription key for %s: %s", tokenKey, err)
 		}
 		if subscriptionKey == nil {
 			return fmt.Errorf("Subscription key not found for token: %s", token)
@@ -146,7 +146,7 @@ func (n *Notification) Send() error {
 		tokenKey := NewTokenKey(token)
 		subscriptionKey, err := db.Get(tokenKey.Bytes())
 		if err != nil {
-			return fmt.Errorf("Error getting subscription key: %v", err)
+			return fmt.Errorf("Error getting subscription key for %s: %s", tokenKey, err)
 		}
 		if subscriptionKey == nil {
 			return fmt.Errorf("Subscription key not found for token: %s", token)
