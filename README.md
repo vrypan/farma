@@ -65,6 +65,9 @@ You can send a notification to all users subscribed to a frame:
 ```
 farma notification-send "myframe" "Hello" "Hello, there!" ""
 ```
+## 7. Check out the API documentation
+
+See: [Documentation/API.md](Documentation/API.md)
 
 # TODO
 
