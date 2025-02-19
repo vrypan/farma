@@ -85,7 +85,7 @@ console.log(json);
 
 ```
 
-`cmd/cli` contains a similar implementation in Go.
+`cmd/cli.go` contains a similar implementation in Go.
 
 ## Commands
 
