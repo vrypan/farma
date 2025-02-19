@@ -69,9 +69,8 @@ For example,
 
 **Make sure you re-validate the frame in Warpcast dev tools.**
 
-7. You can send a notification to all users subscribed to a frame, using:
+7. You can send a notification to all users subscribed to a frame:
 
 ```
-echo '{"command": "notification/send","params": {"frame":"farma","title":"Hello","body":"Hello, there!", "url":""}}' \
-| farma cli - -p -s | jq
+farma notification-send "myframe" "Hello" "Hello, there!" ""
 ```
