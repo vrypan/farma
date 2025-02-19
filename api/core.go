@@ -168,6 +168,15 @@ func (a Api) Execute() (string, error) {
 			limit = params["name"].(int)
 		}
 		return ShowLogs(uint64(userId), limit), nil
+	case "subscriptions/get":
+		frameId := 0
+		limit := 1000
+		params := a.jsonPayload["params"].(map[string]interface{})
+		if params != nil && params["frameId"] != nil && params["limit"] != nil {
+			frameId = params["frameId"].(int)
+			limit = params["limit"].(int)
+		}
+		return ShowSubscriptions(uint64(frameId), limit), nil
 	default:
 		return Error("INVALID_COMMAND", nil), nil
 	}
