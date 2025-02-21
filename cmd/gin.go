@@ -1,12 +1,21 @@
 package cmd
 
 import (
+	"encoding/hex"
+	"fmt"
+	"log"
+	"math"
 	"net/http"
 	"strconv"
+	"time"
+
+	"crypto/hmac"
+	"crypto/sha512"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
+	"github.com/vrypan/farma/config"
 	db "github.com/vrypan/farma/localdb"
 	"github.com/vrypan/farma/utils"
 	"google.golang.org/protobuf/proto"
@@ -24,14 +33,65 @@ func init() {
 	ginServerCmd.Flags().BoolP("verbose", "v", false, "Log additional info.")
 }
 
+const secretKey = "my secret key" // In production, use environment variables or a secure vault
+
+func verifySignature() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		keyHex := config.GetString("key.private")
+		key, err := hex.DecodeString(keyHex[2:])
+		if err != nil {
+			log.Fatalf("Invalid key: %v", err)
+		}
+		rMethod := c.Request.Method
+		rPath := c.Request.URL.Path
+		rDate := c.GetHeader("Date")
+		rSignature := c.GetHeader("X-Signature")
+
+		mac := hmac.New(sha512.New, key)
+		mac.Write([]byte(
+			rMethod + "\n" +
+				rPath + "\n" +
+				rDate + "\n",
+		))
+
+		signature := mac.Sum(nil)
+		sig := hex.EncodeToString(signature)
+		log.Println("Sig1", rSignature)
+		log.Println("Sig2", sig)
+		if rSignature != sig {
+			c.AbortWithStatus(http.StatusUnauthorized)
+		}
+
+		layout := time.RFC1123
+
+		parsedTime, err := time.Parse(layout, rDate)
+		if err != nil {
+			c.AbortWithStatus(http.StatusInternalServerError)
+		}
+		now := time.Now().UTC()
+		diffSeconds := int(math.Abs(float64(now.Sub(parsedTime).Seconds())))
+		fmt.Printf("Seconds until %s: %d seconds\n", rDate, diffSeconds)
+
+		if diffSeconds > 10 {
+			c.AbortWithStatus(http.StatusUnauthorized)
+		}
+		c.Next()
+	}
+}
+
 func ginServer(cmd *cobra.Command, args []string) {
+	config.Load()
 	err := db.Open()
 	if err != nil {
 		panic(err)
 	}
 	defer db.Close()
+
 	router := gin.Default()
+	router.Use(verifySignature())
+
 	router.GET("/api/v1/frames/", H_FramesGetAll)
+
 	router.GET("/api/v1/frames/:id", H_FramesGet)
 	router.POST("/api/v1/frames", H_FrameAdd)
 
@@ -237,3 +297,114 @@ func H_Notify(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"response": responseJson})
 }
+
+/*
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/yaronf/httpsign"
+)
+
+const (
+	serverPort = 8080
+	secretKey  = "your-secret-key" // In production, use environment variables or a secure vault
+)
+
+// getVerifier returns a configured HMAC verifier
+func getVerifier() *httpsign.Verifier {
+	// Create a keystore with our HMAC secret
+	keystore := httpsign.NewMemoryKeyStore()
+	err := keystore.AddKey("client-1", []byte(secretKey), httpsign.HMAC)
+	if err != nil {
+		log.Fatalf("Failed to add key to keystore: %v", err)
+	}
+
+	// Configure verification options
+	verifierOpts := httpsign.VerifierOptions{
+		KeyId:         "client-1",
+		KeyStore:      keystore,
+		Algorithm:     httpsign.HMAC,
+		Headers:       []string{"(request-target)", "host", "date"},
+		MaxSkewMinute: 5,
+	}
+
+	verifier := httpsign.NewVerifier(verifierOpts)
+	return verifier
+}
+
+// verifySignature is a Gin middleware to verify HTTP signatures
+func verifySignature(verifier *httpsign.Verifier) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		req := c.Request
+
+		// Verify the signature
+		err := verifier.Verify(req)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": fmt.Sprintf("Invalid signature: %v", err),
+			})
+			c.Abort()
+			return
+		}
+
+		// Continue to the next handler if signature is valid
+		c.Next()
+	}
+}
+
+func main() {
+	// Setup Gin router
+	router := gin.Default()
+
+	// Initialize the verifier
+	verifier := getVerifier()
+
+	// Public endpoints (no signature verification)
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Welcome to the API. Use /api routes for authenticated endpoints.",
+		})
+	})
+
+	// API group with signature verification middleware
+	api := router.Group("/api")
+	api.Use(verifySignature(verifier))
+	{
+		api.GET("/data", func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{
+				"message": "This is protected data",
+				"time":    time.Now().Format(time.RFC3339),
+			})
+		})
+
+		api.POST("/submit", func(c *gin.Context) {
+			var requestBody map[string]interface{}
+			if err := c.BindJSON(&requestBody); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{
+				"message": "Data received successfully",
+				"data":    requestBody,
+			})
+		})
+	}
+
+	// Start the server
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = fmt.Sprintf("%d", serverPort)
+	}
+	log.Printf("Server starting on port %s...", port)
+	router.Run(":" + port)
+}
+
+*/
