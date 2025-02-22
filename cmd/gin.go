@@ -92,20 +92,17 @@ func ginServer(cmd *cobra.Command, args []string) {
 	defer db.Close()
 
 	router := gin.Default()
-	router.Use(verifySignature())
 
-	router.GET("/api/v1/frames/", H_FramesGetAll)
+	apiv1 := router.Group("/api/v1", verifySignature())
+	{
+		apiv1.GET("/frames/*id", H_FramesGet)
+		apiv1.POST("/frames/", H_FrameAdd)
 
-	router.GET("/api/v1/frames/:id", H_FramesGet)
-	router.POST("/api/v1/frames", H_FrameAdd)
+		apiv1.GET("/subscriptions/*frameId", H_SubscriptionsGet)
+		apiv1.GET("/logs/*userId", H_LogsGet)
 
-	router.GET("/api/v1/subscriptions/", H_SubscriptionsGet)
-	router.GET("/api/v1/subscriptions/:frameId", H_SubscriptionsGet)
-
-	router.GET("/api/v1/logs/", H_LogsGet)
-	router.GET("/api/v1/logs/:userId", H_LogsGet)
-
-	router.POST("/api/v1/notifications/", H_Notify)
+		apiv1.POST("/notifications/", H_Notify)
+	}
 
 	router.Run(":1234")
 }
@@ -114,16 +111,16 @@ func apiHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"path": c.Request.URL.Path})
 }
 
-func H_FramesGetAll(c *gin.Context) {
-	frames := utils.AllFrames()
-	c.JSON(http.StatusOK, gin.H{"frames": frames})
-}
-
 func H_FramesGet(c *gin.Context) {
-	idStr := c.Param("id")
+	idStr := c.Param("id")[1:]
+	if idStr == "" {
+		frames := utils.AllFrames()
+		c.JSON(http.StatusOK, gin.H{"frames": frames})
+		return
+	}
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "INVALID_ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "INVALID_ID: " + idStr})
 		return
 	}
 
@@ -148,10 +145,14 @@ func H_FrameAdd(c *gin.Context) {
 	frame := utils.NewFrame()
 	err := frame.FromName(requestBody.Name)
 	if err == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "frame exists"})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"error": "frame exists",
+		})
+		return
 	}
 	if err != db.ERR_NOT_FOUND {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 	frame.Name = requestBody.Name
 	frame.Domain = requestBody.Domain
@@ -163,12 +164,13 @@ func H_FrameAdd(c *gin.Context) {
 
 	if err := frame.Save(); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"frame": frame})
+	c.JSON(http.StatusCreated, frame)
 }
 
 func H_SubscriptionsGet(c *gin.Context) {
-	frameId := c.Param("frameId")
+	frameId := c.Param("frameId")[1:]
 	var prefix string
 	if frameId == "" {
 		prefix = "s:id:"
@@ -197,7 +199,7 @@ func H_SubscriptionsGet(c *gin.Context) {
 }
 
 func H_LogsGet(c *gin.Context) {
-	userId := c.Param("userId")
+	userId := c.Param("userId")[1:]
 	var prefix string
 	if userId == "" {
 		prefix = "l:user:"
@@ -216,9 +218,9 @@ func H_LogsGet(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 	}
-	list := make([]*utils.Subscription, len(data))
+	list := make([]*utils.UserLog, len(data))
 	for i, item := range data {
-		var pb utils.Subscription
+		var pb utils.UserLog
 		proto.Unmarshal(item, &pb)
 		list[i] = &pb
 	}
@@ -299,116 +301,5 @@ func H_Notify(c *gin.Context) {
 		NotificationId: notificationId,
 		Count:          notificationCount,
 	}
-	c.JSON(http.StatusOK, gin.H{"response": responseJson})
+	c.JSON(http.StatusOK, responseJson)
 }
-
-/*
-package main
-
-import (
-	"fmt"
-	"log"
-	"net/http"
-	"os"
-	"time"
-
-	"github.com/gin-gonic/gin"
-	"github.com/yaronf/httpsign"
-)
-
-const (
-	serverPort = 8080
-	secretKey  = "your-secret-key" // In production, use environment variables or a secure vault
-)
-
-// getVerifier returns a configured HMAC verifier
-func getVerifier() *httpsign.Verifier {
-	// Create a keystore with our HMAC secret
-	keystore := httpsign.NewMemoryKeyStore()
-	err := keystore.AddKey("client-1", []byte(secretKey), httpsign.HMAC)
-	if err != nil {
-		log.Fatalf("Failed to add key to keystore: %v", err)
-	}
-
-	// Configure verification options
-	verifierOpts := httpsign.VerifierOptions{
-		KeyId:         "client-1",
-		KeyStore:      keystore,
-		Algorithm:     httpsign.HMAC,
-		Headers:       []string{"(request-target)", "host", "date"},
-		MaxSkewMinute: 5,
-	}
-
-	verifier := httpsign.NewVerifier(verifierOpts)
-	return verifier
-}
-
-// verifySignature is a Gin middleware to verify HTTP signatures
-func verifySignature(verifier *httpsign.Verifier) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		req := c.Request
-
-		// Verify the signature
-		err := verifier.Verify(req)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": fmt.Sprintf("Invalid signature: %v", err),
-			})
-			c.Abort()
-			return
-		}
-
-		// Continue to the next handler if signature is valid
-		c.Next()
-	}
-}
-
-func main() {
-	// Setup Gin router
-	router := gin.Default()
-
-	// Initialize the verifier
-	verifier := getVerifier()
-
-	// Public endpoints (no signature verification)
-	router.GET("/", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Welcome to the API. Use /api routes for authenticated endpoints.",
-		})
-	})
-
-	// API group with signature verification middleware
-	api := router.Group("/api")
-	api.Use(verifySignature(verifier))
-	{
-		api.GET("/data", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"message": "This is protected data",
-				"time":    time.Now().Format(time.RFC3339),
-			})
-		})
-
-		api.POST("/submit", func(c *gin.Context) {
-			var requestBody map[string]interface{}
-			if err := c.BindJSON(&requestBody); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				return
-			}
-
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Data received successfully",
-				"data":    requestBody,
-			})
-		})
-	}
-
-	// Start the server
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = fmt.Sprintf("%d", serverPort)
-	}
-	log.Printf("Server starting on port %s...", port)
-	router.Run(":" + port)
-}
-
-*/

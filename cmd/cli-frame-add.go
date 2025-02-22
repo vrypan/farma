@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/vrypan/farma/api"
+	"github.com/vrypan/farma/utils"
 )
 
 var cliFrameAddCmd = &cobra.Command{
@@ -15,40 +17,38 @@ var cliFrameAddCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(cliFrameAddCmd)
-	cliFrameAddCmd.Flags().StringP("url", "u", "config", "API endpoint. Defaults to host.addr/api/v1/ (from config file)")
-	cliFrameAddCmd.Flags().BoolP("send", "s", true, "Send generated JSON to server")
+	cliFrameAddCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v1/frames/ (from config file)")
 }
 
 func cliFrameAdd(cmd *cobra.Command, args []string) {
+	apiEndpointPath := "frames/"
+	endpoint, _ := cmd.Flags().GetString("path")
+
+	method := "POST"
+
 	if len(args) != 2 {
 		cmd.Help()
 		return
 	}
 	frameName := args[0]
 	frameDomain := args[1]
-
 	payload := `{
-		"command": "frames/add",
-		"params": {
 			"name": "` + frameName + `",
 			"domain": "` + frameDomain + `",
 			"webhook": ""
-		}
 	}`
-	_, resp := SendCommand(cmd, payload)
-	if resp != nil {
-		var j map[string]any
-		json.Unmarshal(resp, &j)
-		if j["status"].(string) == "SUCCESS" {
-			data := j["data"].(map[string]any)
-			fmt.Printf("Frame Id: %v\n", data["id"].(float64))
-			fmt.Printf("Frame Name: %s\n", data["name"].(string))
-			fmt.Printf("Frame Domain: %s\n", data["domain"].(string))
-			fmt.Printf("Frame Webhook: %s\n", data["webhook"].(string))
-		}
-		if j["status"].(string) == "ERROR" {
-			fmt.Printf("An error occured: %s\n", j["message"].(string))
-		}
+
+	res, err := api.ApiCall(method, endpoint, apiEndpointPath, "", []byte(payload))
+	if err != nil {
+		fmt.Printf("Failed to make API call: %v %s\n", err, res)
+		return
 	}
+	var data utils.Frame
+
+	if err := json.Unmarshal(res, &data); err != nil {
+		fmt.Printf("Failed to parse response: %v", err)
+		return
+	}
+	fmt.Printf("%04d %-32s %45s %s\n", int(data.Id), data.Name, data.Webhook, data.Domain)
 
 }

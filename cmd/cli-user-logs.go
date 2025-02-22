@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/vrypan/farma/api"
 	"github.com/vrypan/farma/utils"
 )
 
@@ -19,54 +20,33 @@ This is a wrapper command that uses the farma API.`,
 
 func init() {
 	rootCmd.AddCommand(cliLogsCmd)
-	cliLogsCmd.Flags().StringP("url", "u", "config", "API endpoint. Defaults to host.addr/api/v1/ (from config file)")
+	cliLogsCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v1/frames/ (from config file)")
+	cliLogsCmd.Flags().String("id", "", "User Id (fid) or none to list all logs")
 }
 
 func cliLogs(cmd *cobra.Command, args []string) {
-	payload := `{
-		"command": "logs/get",
-		"params": {}
-	}`
+	apiEndpointPath := "logs/"
+	endpoint, _ := cmd.Flags().GetString("path")
+	id, _ := cmd.Flags().GetString("id")
+	body := []byte("")
+	method := "GET"
 
-	cmd.Flags().Bool("send", true, "")
-	_, resp := SendCommand(cmd, payload)
-	if resp == nil {
+	res, err := api.ApiCall(method, endpoint, apiEndpointPath, id, body)
+	if err != nil {
+		fmt.Printf("Failed to make API call: %v", err)
 		return
 	}
 
-	var j map[string]interface{}
-	if err := json.Unmarshal(resp, &j); err != nil {
+	dataStruct := struct {
+		Data []*utils.UserLog `json:"result"`
+	}{}
+
+	if err := json.Unmarshal(res, &dataStruct); err != nil {
 		fmt.Printf("Failed to parse response: %v", err)
 		return
 	}
-
-	switch status := j["status"].(string); status {
-	case "SUCCESS":
-		list, ok := j["data"].([]interface{})
-		if !ok {
-			fmt.Println("Failed to cast data to list of map[string]interface{}")
-			return
-		}
-		for _, data := range list {
-			d, ok := data.(map[string]interface{})
-			if !ok {
-				fmt.Println("Failed to cast list item to map[string]interface{}")
-				continue
-			}
-			userId, _ := d["userId"].(float64)
-			frameId, _ := d["frameId"].(float64)
-			appId, _ := d["appId"].(float64)
-			evtTypeNum, _ := d["evtType"].(float64)
-			evtType := utils.EventType(evtTypeNum).String()
-			cTime, _ := d["ctime"].(map[string]interface{})
-			date := time.Unix(int64(cTime["seconds"].(float64)), int64(cTime["nanos"].(float64)))
-
-			fmt.Printf("%06d %04d %04d %-45s %s\n", int(userId), int(frameId), int(appId), evtType, date.Format("2006-01-02 15:04:05"))
-		}
-	case "ERROR":
-		message, _ := j["message"].(string)
-		fmt.Printf("An error occurred: %s\n", message)
-	default:
-		fmt.Printf("Unknown status received: %s\n", status)
+	for _, data := range dataStruct.Data {
+		fmt.Printf("%06d %04d %04d %-45s %s\n",
+			data.UserId, data.FrameId, data.AppId, data.EvtType.Enum(), data.Ctime.AsTime().Format(time.RFC3339))
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/vrypan/farma/api"
 )
 
 var cliFramesListCmd = &cobra.Command{
@@ -17,53 +18,37 @@ This is a wrapper command that uses the farma API.`,
 
 func init() {
 	rootCmd.AddCommand(cliFramesListCmd)
-	cliFramesListCmd.Flags().StringP("url", "u", "config", "API endpoint. Defaults to host.addr/api/v1/ (from config file)")
+	cliFramesListCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v1/frames/ (from config file)")
+	cliFramesListCmd.Flags().String("id", "", "Frame Id or none to list all frames")
 }
-
 func cliFramesList(cmd *cobra.Command, args []string) {
-	payload := `{
-		"command": "frames/get",
-		"params": {}
-	}`
+	apiEndpointPath := "frames/"
+	endpoint, _ := cmd.Flags().GetString("path")
+	id, _ := cmd.Flags().GetString("id")
+	body := []byte("")
+	method := "GET"
 
-	cmd.Flags().Bool("send", true, "")
-	_, resp := SendCommand(cmd, payload)
-	if resp == nil {
+	res, err := api.ApiCall(method, endpoint, apiEndpointPath, id, body)
+	if err != nil {
+		fmt.Printf("Failed to make API call: %v", err)
 		return
 	}
 
-	var j map[string]interface{}
-	if err := json.Unmarshal(resp, &j); err != nil {
+	dataStruct := struct {
+		Frames []struct {
+			ID      float64 `json:"id"`
+			Name    string  `json:"name"`
+			Webhook string  `json:"webhook"`
+			Domain  string  `json:"domain"`
+		} `json:"frames"`
+	}{}
+
+	if err := json.Unmarshal(res, &dataStruct); err != nil {
 		fmt.Printf("Failed to parse response: %v", err)
 		return
 	}
-
-	switch status := j["status"].(string); status {
-	case "SUCCESS":
-		list, ok := j["data"].([]interface{})
-		if !ok {
-			fmt.Println("Failed to cast data to list of map[string]interface{}")
-			return
-		}
-
-		for _, data := range list {
-			d, ok := data.(map[string]interface{})
-			if !ok {
-				fmt.Println("Failed to cast list item to map[string]interface{}")
-				continue
-			}
-
-			id, _ := d["id"].(float64)
-			name, _ := d["name"].(string)
-			webhook, _ := d["webhook"].(string)
-			domain, _ := d["domain"].(string)
-
-			fmt.Printf("%04d %32s %45s %s\n", int(id), name, webhook, domain)
-		}
-	case "ERROR":
-		message, _ := j["message"].(string)
-		fmt.Printf("An error occurred: %s\n", message)
-	default:
-		fmt.Printf("Unknown status received: %s\n", status)
+	for _, data := range dataStruct.Frames {
+		fmt.Printf("%04d %-32s %45s %s\n", int(data.ID), data.Name, data.Webhook, data.Domain)
 	}
+
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/vrypan/farma/api"
 )
 
 var cliNotificationSendCmd = &cobra.Command{
@@ -15,43 +16,44 @@ var cliNotificationSendCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(cliNotificationSendCmd)
-	cliNotificationSendCmd.Flags().StringP("url", "u", "config", "API endpoint. Defaults to host.addr/api/v1/ (from config file)")
+	cliNotificationSendCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v1/frames/ (from config file)")
 }
 
 func cliNotificationSend(cmd *cobra.Command, args []string) {
-	cmd.Flags().Bool("send", true, "")
+	apiEndpointPath := "notifications/"
+	endpoint, _ := cmd.Flags().GetString("path")
+	method := "POST"
 
 	if len(args) != 4 {
 		cmd.Help()
 		return
 	}
-	frameName := args[0]
+	frameId := args[0]
 	title := args[1]
 	body := args[2]
 	url := args[3]
 
 	payload := `{
-		"command": "notification/send",
-		"params": {
-			"frame": "` + frameName + `",
-			"title": "` + title + `",
-			"body": "` + body + `",
-			"url": "` + url + `"
-		}
+		"frameId": ` + frameId + `,
+		"title": "` + title + `",
+		"body": "` + body + `",
+		"url": "` + url + `"
 	}`
-	_, resp := SendCommand(cmd, payload)
 
-	if resp != nil {
-		var j map[string]any
-		json.Unmarshal(resp, &j)
-		if j["status"].(string) == "SUCCESS" {
-			data := j["data"].(map[string]any)
-			fmt.Printf("Notification Id: %s\n", data["NotificationId"].(string))
-			fmt.Printf("Token count: %d\n", int(data["Count"].(float64)))
-		}
-		if j["status"].(string) == "ERROR" {
-			fmt.Printf("%s: %s\n", j["message"].(string), j["data"].(string))
-		}
+	res, err := api.ApiCall(method, endpoint, apiEndpointPath, "", []byte(payload))
+	if err != nil {
+		fmt.Printf("Failed to make API call: %v %s\n", err, res)
+		return
 	}
+	var data struct {
+		NotificationId string
+		Count          int
+	}
+
+	if err := json.Unmarshal(res, &data); err != nil {
+		fmt.Printf("Failed to parse response: %v", err)
+		return
+	}
+	fmt.Printf("NotificationId:%s, Count:%d\n", data.NotificationId, data.Count)
 
 }
