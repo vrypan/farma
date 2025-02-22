@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"encoding/hex"
-	"fmt"
 	"log"
 	"math"
 	"net/http"
@@ -36,44 +35,49 @@ func init() {
 const secretKey = "my secret key" // In production, use environment variables or a secure vault
 
 func verifySignature() gin.HandlerFunc {
+	keyHex := config.GetString("key.private")
+	key, err := hex.DecodeString(keyHex[2:])
+	if err != nil {
+		log.Fatalf("Invalid key: %v", err)
+	}
+
+	layout := time.RFC1123
+	mac := hmac.New(sha512.New, key)
+
 	return func(c *gin.Context) {
-		keyHex := config.GetString("key.private")
-		key, err := hex.DecodeString(keyHex[2:])
-		if err != nil {
-			log.Fatalf("Invalid key: %v", err)
-		}
 		rMethod := c.Request.Method
 		rPath := c.Request.URL.Path
 		rDate := c.GetHeader("Date")
 		rSignature := c.GetHeader("X-Signature")
 
-		mac := hmac.New(sha512.New, key)
-		mac.Write([]byte(
-			rMethod + "\n" +
-				rPath + "\n" +
-				rDate + "\n",
-		))
+		mac.Reset()
+		mac.Write([]byte(rMethod + "\n" + rPath + "\n" + rDate))
 
 		signature := mac.Sum(nil)
 		sig := hex.EncodeToString(signature)
-		log.Println("Sig1", rSignature)
-		log.Println("Sig2", sig)
-		if rSignature != sig {
-			c.AbortWithStatus(http.StatusUnauthorized)
-		}
 
-		layout := time.RFC1123
+		if rSignature != sig {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "Calculated signature does not match X-Signature",
+			})
+			return
+		}
 
 		parsedTime, err := time.Parse(layout, rDate)
 		if err != nil {
-			c.AbortWithStatus(http.StatusInternalServerError)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"error": "Error parsing Date header",
+			})
+			return
 		}
 		now := time.Now().UTC()
 		diffSeconds := int(math.Abs(float64(now.Sub(parsedTime).Seconds())))
-		fmt.Printf("Seconds until %s: %d seconds\n", rDate, diffSeconds)
 
 		if diffSeconds > 10 {
-			c.AbortWithStatus(http.StatusUnauthorized)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "Date diff more than 10 seconds",
+			})
+			return
 		}
 		c.Next()
 	}
