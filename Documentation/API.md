@@ -1,114 +1,234 @@
 # API
 
-## Request format and authentication
+## Authentication
 
-All API calls have the same endpoint, `/api/v1/`, and they follow the
-[JSON Farcaster Signatures spec](https://github.com/farcasterxyz/protocol/discussions/208).
+All calls bellow that indicate Authentication, must provide a `X-Signature` HTTP header.
 
-However, instead of using a Farcaster AppKey, the requests are signed by a shared key generated
-during `fargo setup`. `header.type` is set to `shared` and `fid` is set to `0`.
-
-For example:
-
-`"header":{ "fid": 0, "type": "shared", "key": "0x30a63474db060dc307353490e6417d1318dbb06f3c1c208bbce499b710033aee" }`
-
-In the future, `farma` may support `custody` and `app_key` types, if it makes sense.
-
-## Payload
-
-The actual API call is included in the `payload` field of JFS. It contains two parts, `command` and `params`.
-
-For example:
+The signature is calculated as
 
 ```
-"payload": {
-  "command": "frames/get",
-  "params": {
-    "id": 1
-  }
-}
+HMAC-SHA512(
+  PRIVATE_KEY,
+  HTTP_METHOD + "\n" + PATH + "\n" + DATE
+)
 ```
 
-Once you have the header and the payload, you can construct the JFS object and send it to `/api/v1/`.
-
-Sample Javascript:
+Sample code in Javascript:
 
 ```javascript
+const https = require("http");
+const crypto = require("crypto");
 
-const nacl = require("tweetnacl");
-const util = require("tweetnacl-util");
+const date = new Date(Date.now()).toUTCString();
 
-function toBase64URL(s) {
-  if (typeof s === "string") {
-    s = new Uint8Array(util.decodeUTF8(s));
-  }
-  return util
-    .encodeBase64(s)
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-}
+const keyHex = "private key in hex format, no 0x padding"
+const keyBytes = Buffer.from(keyHex, "hex");
 
-const PUB_STR = "0x...." // Private Ed25519 key in hex format
-const PRIV_STR = "0x...." // Private Ed25519 key in hex format
-const privateKey = new Uint8Array(Buffer.from(PRIV_STR.slice(2), "hex"));
-const publicKey = new Uint8Array( Buffer.from(PUB_STR.slice(2), "hex") );
+const options = {
+  hostname: "localhost",
+  port: 1234,
+  path: "/api/v1/logs/20396",
+  method: "GET",
+  headers: {
+    "Content-Type": "application/json",
+    Date: date,
+  },
+};
+const str = options.method + "\n" + options.path + "\n" + date;
+const hmac = crypto.createHmac("sha512", keyBytes).update(str).digest("hex");
 
-const header = toBase64URL(
-  JSON.stringify({ fid: 0, type: "shared", key: PUB_HEX }),
-);
-const payload = toBase64URL(
-  JSON.stringify({
-    command: "notification/send",
-    params: {
-      frame: "farma2",
-      title: "Hello there",
-      body: "This is the message body",
-      url: "",
-    },
-  }),
-);
+options.headers["X-Signature"] = hmac;
 
-const S = header + "." + payload; // Construct the message to sign
-const message = util.decodeUTF8(S);
-const signature = nacl.sign.detached(message, privateKey);
-const signatureBase64URL = toBase64URL(signature);
+const req = https.request(options, (res) => {
+  // console.log("Status Code:", res.statusCode);
+  //console.log("Headers:", res.headers);
 
-// Construct the JSON
-const json = JSON.stringify({
-  header: header,
-  payload: payload,
-  signature: signatureBase64URL,
+  let data = "";
+  res.on("data", (chunk) => {
+    data += chunk;
+  });
+
+  res.on("end", () => {
+    console.log(data);
+  });
 });
 
-console.log(json);
+req.on("error", (err) => {
+  console.error("Error:", err);
+});
 
+req.end();
 ```
 
-`cmd/cli.go` contains a similar implementation in Go.
+This is not ideal, but it's good enough for now, and it's easy for clients to implement.
+Check `api/utils.go` for an implementation in Go.
 
-## Commands
+## Endpoints
 
-The following commands are available. This section will definitely change
-because they need normalization, pagination, etc.
+### Frames
 
-### `notification/send`
-- Expects `frame` (the frame short name), `title`, `body`, `url` in params.
-- It will send the notification to all users subscribed to `frame`.
+#### Get Frames
+|Item|Description |
+|:--|:--|
+|endpoint| /api/v1/frames/:id|
+|method | GET|
+|authentication| required |
 
-### `frames/get`
-- Optional parameter `id` (number, the frameId)
-- It will return all frames, or only the specific frame id
+Returns a JSON object with information about the configured frames. If `id`
+is ommited, it will return all frames.
 
-### `frames/add`
-- Expects `name`, `domain`, `webhook`
-- It will configure a new frame.
+Sample response:
 
-### `subscriptions/get`
-- Optional parameters `frameId` and `limit`.
-- It will return subscriptions for all frmaes or only for `frameId`. `limit` is the maximum number of results to return.
+```json
+[
+  {
+    "id": 1,
+    "name": "example",
+    "domain": "example.com",
+    "webhook": "/f/16c89d6c-4356-4481-accc-18b3a0b49a2b"
+  },
+  {
+    "id": 2,
+    "name": "example2",
+    "domain": "example2.com",
+    "webhook": "/f/8dd2b175-83ba-48ba-9dd0-41453b4f86ef"
+  }
+]
+```
+#### Create Frame
+|Item|Description |
+|:--|:--|
+|endpoint| /api/v1/frames/|
+|method | POST|
+|authentication| required |
+|payload| `{"name": "frame name", "domain": "frame domain", "webhook":""}`|
 
-### `logs/get`
-- Optional parameters `userId` and `limit`.
-- It will return activity logs (subscription status updates, notifications sent) for all users or only for `userId`.
-`limit` is the maximum number of results to return.
+It will configure a new frame into Farma. It is advised to leave `webhook` empty, unless you know exactly what you are doing.
+
+Sample response:
+
+```json
+  {
+    "id": 1,
+    "name": "example",
+    "domain": "example.com",
+    "webhook": "/f/16c89d6c-4356-4481-accc-18b3a0b49a2b"
+  },
+```
+
+### Subscriptions
+
+#### Get Subscriptions
+|Item|Description |
+|:--|:--|
+|endpoint| /api/v1/subscriptions/:frameid|
+|method | GET|
+|authentication| required |
+
+This endpoint will return a list of subscriptions. If `frameId` is provided
+it will return only subscriptions for that frame.
+
+Sample response:
+
+```json
+[
+  {
+    "frameId": 1,
+    "userId": 20396,
+    "appId": 9152,
+    "status": 2,
+    "url": "https://api.warpcast.com/v1/frame-notifications",
+    "token": "01952cfc-cc2f-8b3c-4ed8-a476d9b05050",
+    "ctime": {
+      "seconds": 1739953526,
+      "nanos": 954099000
+    },
+    "mtime": {
+      "seconds": 1740216525,
+      "nanos": 388740000
+    },
+    "verified": true,
+    "appKey": "aaNtJNyy5/aE0aWssFSjq1EuP6ZU9bHcE53LLxmAEM0="
+  },
+ ...
+]
+```
+
+### User Logs
+
+#### Get Logs
+|Item|Description |
+|:--|:--|
+|endpoint| /api/v1/logs/:userId|
+|method | GET|
+|authentication| required |
+
+This endpoint will return history logs. If `userId` (fid) is provided
+it will return only logs for that user. Events include frame add/remove,
+notifications enabled/disabled, and notifications sent.
+
+|EvtType|Description |
+|:--|:--|
+|1|Frame added|
+|2|Frame removed|
+|3|Notification enabled|
+|4|Notification disabled|
+|5|Notification sent|
+|6|Notification failed other|
+|7|Notification failed invalid|
+|8|Notification failed rate limit|
+
+Sample response:
+
+```json
+[
+  {
+    "frameId": 1,
+    "userId": 280,
+    "appId": 9152,
+    "evtType": 2,
+    "ctime": {
+      "seconds": 1739953487,
+      "nanos": 955840000
+    }
+  },
+  {
+    "frameId": 1,
+    "userId": 280,
+    "appId": 9152,
+    "evtType": 1,
+    "ctime": {
+      "seconds": 1739953499,
+      "nanos": 487717000
+    }
+  },
+ ...
+]
+```
+
+### Notifications
+
+#### Send notification
+|Item|Description |
+|:--|:--|
+|endpoint| /api/v1/notifications/|
+|method | POST|
+|authentication| required |
+|payload| `{"frameId": frameId, "title": "notif title", "body": "notif body", "url": "notification link"}`|
+
+It will send a notification to all subscriebrs of frame `frameId`.
+- `url` must be under the frame domain
+- You can leave `url` empty (""), to link to the frame itself.
+- All users will get the same notification.
+
+It will rerturn the `notificationId` used to send the noitification and the number of notifications
+**attempted** to send.
+
+Sample response:
+
+```json
+  {
+    "NotificationId": "12345678-4356-4481-accc-18b3a0b49a2b"
+    "Count" : 3
+  },
+```
