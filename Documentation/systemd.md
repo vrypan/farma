@@ -59,3 +59,16 @@ Check if the service is running: `cat /var/log/farma.log`
 
 To automatically start the service on boot, enable it:
 `sudo systemctl enable farma.service`
+
+## Notes
+
+If you have the above configuration, and you are using the comman-line tools like `farma frames-list`,
+make sure you export `XDG_CONFIG_HOME` accordingly,
+
+`export XDG_CONFIG_HOME=/etc/`
+
+or export `FARMA_PRIVATE_KEY`
+
+`export FARMA_PRIVATE_KEY=<your private key>`
+
+You can get the private key from `/etc/farma/config.yaml`
