@@ -12,8 +12,11 @@ Create a new user (`farma` in this case), that will run the service
 Then create the `/etc/farma` (config files) and `/var/lib/farma` (data files) and set the ownership to `farma`.
 
 `sudo mkdir /etc/farma`
+
 `sudo chown farma:farma /etc/farma`
+
 `sudo mkdir /var/lib/farma`
+
 `sudo chown farma:farma /var/lib/farma`
 
 ## 2. Run the setup script
@@ -49,6 +52,7 @@ WantedBy=multi-user.target
 
 Then enable and start the service
 `sudo systemctl daemon-reload`
+
 `sudo systemctl start farma.service`
 
 Check if the service is running: `cat /var/log/farma.log`
