@@ -105,8 +105,11 @@ func ginServer(cmd *cobra.Command, args []string) {
 		apiv1.GET("/subscriptions/*frameId", api.H_SubscriptionsGet)
 		apiv1.GET("/logs/*userId", api.H_LogsGet)
 
+		apiv1.GET("/dbkeys/*prefix", api.H_DbKeysGet)
+
 		apiv1.POST("/notifications/", api.H_Notify)
 	}
+	router.GET("/api/v1/version", api.H_Version)
 	router.POST("/f/:id", api.WebhookHandler(hub))
 
 	router.Run(serverAddr)

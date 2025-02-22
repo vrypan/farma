@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/vrypan/farma/config"
 	db "github.com/vrypan/farma/localdb"
 	"github.com/vrypan/farma/utils"
 	"google.golang.org/protobuf/proto"
@@ -203,4 +204,30 @@ func H_Notify(c *gin.Context) {
 		Count:          notificationCount,
 	}
 	c.JSON(http.StatusOK, responseJson)
+}
+
+func H_DbKeysGet(c *gin.Context) {
+	prefix := c.Param("prefix")[1:]
+
+	limitStr := c.DefaultQuery("limit", "1000")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+	data, err := db.GetKeys([]byte(prefix), limit)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+	}
+	list := make([]string, len(data))
+
+	for i, key := range data {
+		list[i] = string(key)
+	}
+	c.JSON(http.StatusOK, list)
+}
+
+func H_Version(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"version": config.FARMA_VERSION})
 }
