@@ -69,7 +69,7 @@ farma notification-send "myframe" "Hello" "Hello, there!" ""
 ```
 
 # Run as a service
-If you want to configure farma as a systemd service, see [Documantation/systemd.md](Documantation/systemd.md).
+If you want to configure farma as a systemd service, see [Documentation/systemd.md](Documentation/systemd.md).
 
 # API
 farma provides a REST API to let you use it from your own applications.
