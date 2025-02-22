@@ -1,115 +1,15 @@
-package cmd
+package api
 
 import (
-	"encoding/hex"
-	"log"
-	"math"
 	"net/http"
 	"strconv"
-	"time"
-
-	"crypto/hmac"
-	"crypto/sha512"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/spf13/cobra"
-	"github.com/vrypan/farma/config"
 	db "github.com/vrypan/farma/localdb"
 	"github.com/vrypan/farma/utils"
 	"google.golang.org/protobuf/proto"
 )
-
-var ginServerCmd = &cobra.Command{
-	Use:   "gin",
-	Short: "",
-	Run:   ginServer,
-}
-
-func init() {
-	rootCmd.AddCommand(ginServerCmd)
-	ginServerCmd.Flags().StringP("address", "a", "", "Listen on this address/port.")
-	ginServerCmd.Flags().BoolP("verbose", "v", false, "Log additional info.")
-}
-
-const secretKey = "my secret key" // In production, use environment variables or a secure vault
-
-func verifySignature() gin.HandlerFunc {
-	keyHex := config.GetString("key.private")
-	key, err := hex.DecodeString(keyHex[2:])
-	if err != nil {
-		log.Fatalf("Invalid key: %v", err)
-	}
-
-	layout := time.RFC1123
-	mac := hmac.New(sha512.New, key)
-
-	return func(c *gin.Context) {
-		rMethod := c.Request.Method
-		rPath := c.Request.URL.Path
-		rDate := c.GetHeader("Date")
-		rSignature := c.GetHeader("X-Signature")
-
-		mac.Reset()
-		mac.Write([]byte(rMethod + "\n" + rPath + "\n" + rDate))
-
-		signature := mac.Sum(nil)
-		sig := hex.EncodeToString(signature)
-
-		if rSignature != sig {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "Calculated signature does not match X-Signature",
-			})
-			return
-		}
-
-		parsedTime, err := time.Parse(layout, rDate)
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-				"error": "Error parsing Date header",
-			})
-			return
-		}
-		now := time.Now().UTC()
-		diffSeconds := int(math.Abs(float64(now.Sub(parsedTime).Seconds())))
-
-		if diffSeconds > 10 {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "Date diff more than 10 seconds",
-			})
-			return
-		}
-		c.Next()
-	}
-}
-
-func ginServer(cmd *cobra.Command, args []string) {
-	config.Load()
-	err := db.Open()
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
-
-	router := gin.Default()
-
-	apiv1 := router.Group("/api/v1", verifySignature())
-	{
-		apiv1.GET("/frames/*id", H_FramesGet)
-		apiv1.POST("/frames/", H_FrameAdd)
-
-		apiv1.GET("/subscriptions/*frameId", H_SubscriptionsGet)
-		apiv1.GET("/logs/*userId", H_LogsGet)
-
-		apiv1.POST("/notifications/", H_Notify)
-	}
-
-	router.Run(":1234")
-}
-
-func apiHandler(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"path": c.Request.URL.Path})
-}
 
 func H_FramesGet(c *gin.Context) {
 	idStr := c.Param("id")[1:]

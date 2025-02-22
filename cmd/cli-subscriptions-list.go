@@ -37,7 +37,6 @@ func cliSubscriptions(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	fmt.Println(string(res))
 	dataStruct := struct {
 		Data []*utils.Subscription `json:"subscriptions"`
 	}{}
