@@ -1,5 +1,8 @@
 # Running farma as a linux service
 
+Assuming you have downloaded [the latest binary for your platform](https://github.com/vrypan/farma/releases),
+you have extracted the binary, and moved it in `/usr/local/bin/farma`.
+
 ## 1. Create user and required directories
 
 Create a new user (`farma` in this case), that will run the service
