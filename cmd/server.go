@@ -81,6 +81,9 @@ func verifySignature() gin.HandlerFunc {
 
 func ginServer(cmd *cobra.Command, args []string) {
 	config.Load()
+	if config.FARMA_VERSION != "" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	err := db.Open()
 	if err != nil {
 		panic(err)
@@ -112,5 +115,7 @@ func ginServer(cmd *cobra.Command, args []string) {
 	router.GET("/api/v1/version", api.H_Version)
 	router.POST("/f/:id", api.WebhookHandler(hub))
 
+	log.Printf("Starting farma %s\n", config.FARMA_VERSION)
+	log.Printf("Listening and serving HTTP on %s", serverAddr)
 	router.Run(serverAddr)
 }

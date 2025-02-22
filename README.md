@@ -21,7 +21,7 @@ frames notifications.
 - Updates user subscription status based on notification replies from the app (success, rate limited, invalid tokens).
 - Allows batch sending notifications to all users subscribed to a frame.
 
-# Setup
+# Quick Start
 
 (This will improve a lot, but in case someone wants to give it an early try.)
 
@@ -35,12 +35,6 @@ Run `farma setup`.
 Make sure you save the private key. The key is used to sign API requests,
 and you will need it even if you are using the CLI commands (they actually use the API
 under the hood)
-
-If you are ok with it being in plain text in the config file, use
-`farma config set key.private <private_key>` to save it there.
-
-Alternatively, you can `export FARMA_KEY_PRIVATE=<private_key>` to avoid haveing to pass it manually
-to the following commands.
 
 ## 3. Start the server
 Start the farma server: `farma server`
@@ -73,7 +67,12 @@ You can send a notification to all users subscribed to a frame:
 ```
 farma notification-send "myframe" "Hello" "Hello, there!" ""
 ```
-## 7. Check out the API documentation
+
+# Run as a service
+If you want to configure farma as a systemd service, see [Documantation/systemd.md](Documantation/systemd.md).
+
+# API
+farma provides a REST API to let you use it from your own applications.
 
 See: [Documentation/API.md](Documentation/API.md)
 

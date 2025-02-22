@@ -48,18 +48,19 @@ func setupFidr(cmd *cobra.Command, args []string) {
 		fmt.Printf(" > Private key: %s\n", privKeyHex)
 		fmt.Printf(" > Public key: %s\n", pubKeyHex)
 		viper.Set("key.public", pubKeyHex)
-		//viper.Set("key.private", privKeyHex)
-		fmt.Println(" >>> Make sure you save your private key somewhere safe! <<<")
+		viper.Set("key.private", privKeyHex)
+		fmt.Printf(" >>> Keys are stored in %s/config.yaml\n", configDir)
+		fmt.Println(" >>> Not ideal, but it will work for now.")
 		viper.WriteConfig()
 	}
-	fmt.Printf(" > View/Edit your keypair in %s/%s\n", configDir, "farma.yaml")
+	fmt.Printf(" > View/Edit your keypair in %s/%s\n", configDir, "config.yaml")
 	fmt.Println()
 
 	dbPath := db.Path()
 	fmt.Printf("Database path is %s\n", dbPath)
 	fmt.Println()
 
-	fmt.Printf("The config file is %s/%s\n", configDir, "farma.yaml")
+	fmt.Printf("The config file is %s/%s\n", configDir, "config.yaml")
 	fmt.Println(" > You can edit it to change these values or use `fargo config`.")
 	fmt.Println()
 }

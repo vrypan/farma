@@ -12,7 +12,8 @@ import (
 )
 
 var db *badger.DB
-var db_path = ""
+
+// var db_path = ""
 var (
 	ERR_NOT_FOUND  = errors.New("Not Found")
 	ERR_NOT_STORED = errors.New("Not Stored")
@@ -22,15 +23,46 @@ var (
 
 var FrameIdSequence *Sequence
 
-func init() {
-	if db_path == "" {
+func Path() string {
+	path := config.GetString("db.path")
+	if path == "" {
 		configDir, err := config.ConfigDir()
 		if err != nil {
 			panic(err)
 		}
-		db_path = filepath.Join(configDir, "badger.db")
+		path = configDir
 	}
+	path = filepath.Join(path, "badger.db")
+	return path
 }
+func Open() error {
+	config.Load()
+	var err error
+	db, err = badger.Open(badger.DefaultOptions(Path()).WithLoggingLevel(badger.ERROR))
+	if err != nil {
+		return err
+	}
+	// This sequence is used when adding a new frame to the database
+	// This is an operation that happens rarely, so i't ok to reserve
+	// only one Id, and play the cost of fetching new ones when needed.
+	FrameIdSequence = NewSequence("FrameId", 1)
+	if FrameIdSequence == nil {
+		return fmt.Errorf("Unable to initialize FrameIdSequence")
+	}
+	return nil
+}
+
+/*
+	func init() {
+		if db_path == "" {
+			configDir, err := config.ConfigDir()
+			if err != nil {
+				panic(err)
+			}
+			db_path = filepath.Join(configDir, "badger.db")
+		}
+	}
+*/
 func IsOpen() bool {
 	return db != nil
 }
@@ -87,23 +119,6 @@ func Delete(key []byte) error {
 	})
 }
 
-func Open() error {
-	config.Load()
-	var err error
-	db, err = badger.Open(badger.DefaultOptions(db_path).WithLoggingLevel(badger.ERROR))
-	if err != nil {
-		return err
-	}
-	// This sequence is used when adding a new frame to the database
-	// This is an operation that happens rarely, so i't ok to reserve
-	// only one Id, and play the cost of fetching new ones when needed.
-	FrameIdSequence = NewSequence("FrameId", 1)
-	if FrameIdSequence == nil {
-		return fmt.Errorf("Unable to initialize FrameIdSequence")
-	}
-	return nil
-}
-
 func Close() error {
 	FrameIdSequence.seq.Release()
 	return db.Close()
@@ -111,7 +126,7 @@ func Close() error {
 
 func GetSize() (int64, error) {
 	var size int64
-	err := filepath.Walk(db_path, func(_ string, info os.FileInfo, err error) error {
+	err := filepath.Walk(Path(), func(_ string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -136,10 +151,6 @@ func CountEntries() (int, error) {
 		return nil
 	})
 	return count, err
-}
-
-func Path() string {
-	return db_path
 }
 
 var Update = db.Update
