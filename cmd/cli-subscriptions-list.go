@@ -37,18 +37,16 @@ func cliSubscriptions(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	dataStruct := struct {
-		Data []*utils.Subscription `json:"subscriptions"`
-	}{}
+	var list []*utils.Subscription
 
-	if err := json.Unmarshal(res, &dataStruct); err != nil {
+	if err := json.Unmarshal(res, &list); err != nil {
 		fmt.Printf("Failed to parse response: %v", err)
 		return
 	}
-	for _, data := range dataStruct.Data {
+	for _, item := range list {
 		fmt.Printf("%06d %04d %06d %-20s %s %s %s %s\n",
-			data.UserId, data.FrameId, data.AppId, data.Status.String(),
-			data.Ctime.AsTime().Format(time.RFC3339), data.Mtime.AsTime().Format(time.RFC3339), data.Token, data.Url,
+			item.UserId, item.FrameId, item.AppId, item.Status.String(),
+			item.Ctime.AsTime().Format(time.RFC3339), item.Mtime.AsTime().Format(time.RFC3339), item.Token, item.Url,
 		)
 	}
 }

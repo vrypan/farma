@@ -37,16 +37,13 @@ func cliLogs(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	dataStruct := struct {
-		Data []*utils.UserLog `json:"result"`
-	}{}
-
-	if err := json.Unmarshal(res, &dataStruct); err != nil {
+	var list []*utils.UserLog
+	if err := json.Unmarshal(res, &list); err != nil {
 		fmt.Printf("Failed to parse response: %v", err)
 		return
 	}
-	for _, data := range dataStruct.Data {
+	for _, item := range list {
 		fmt.Printf("%06d %04d %04d %-45s %s\n",
-			data.UserId, data.FrameId, data.AppId, data.EvtType.Enum(), data.Ctime.AsTime().Format(time.RFC3339))
+			item.UserId, item.FrameId, item.AppId, item.EvtType.Enum(), item.Ctime.AsTime().Format(time.RFC3339))
 	}
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/vrypan/farma/api"
+	"github.com/vrypan/farma/utils"
 )
 
 var cliFramesListCmd = &cobra.Command{
@@ -34,21 +35,13 @@ func cliFramesList(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	dataStruct := struct {
-		Frames []struct {
-			ID      float64 `json:"id"`
-			Name    string  `json:"name"`
-			Webhook string  `json:"webhook"`
-			Domain  string  `json:"domain"`
-		} `json:"frames"`
-	}{}
-
-	if err := json.Unmarshal(res, &dataStruct); err != nil {
+	var list []*utils.Frame
+	if err := json.Unmarshal(res, &list); err != nil {
 		fmt.Printf("Failed to parse response: %v", err)
 		return
 	}
-	for _, data := range dataStruct.Frames {
-		fmt.Printf("%04d %-32s %45s %s\n", int(data.ID), data.Name, data.Webhook, data.Domain)
+	for _, item := range list {
+		fmt.Printf("%04d %-32s %45s %s\n", item.Id, item.Name, item.Webhook, item.Domain)
 	}
 
 }

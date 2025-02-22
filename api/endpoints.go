@@ -15,7 +15,7 @@ func H_FramesGet(c *gin.Context) {
 	idStr := c.Param("id")[1:]
 	if idStr == "" {
 		frames := utils.AllFrames()
-		c.JSON(http.StatusOK, gin.H{"frames": frames})
+		c.JSON(http.StatusOK, frames)
 		return
 	}
 	id, err := strconv.ParseUint(idStr, 10, 64)
@@ -25,11 +25,12 @@ func H_FramesGet(c *gin.Context) {
 	}
 
 	frame := utils.NewFrame().FromId(id)
+	frames := append([]*utils.Frame{}, frame)
 	if frame == nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "FRAME_NOT_FOUND"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"frame": frame})
+	c.JSON(http.StatusOK, frames)
 }
 
 func H_FrameAdd(c *gin.Context) {
@@ -95,7 +96,7 @@ func H_SubscriptionsGet(c *gin.Context) {
 		proto.Unmarshal(item, &pb)
 		list[i] = &pb
 	}
-	c.JSON(http.StatusOK, gin.H{"subscriptions": list})
+	c.JSON(http.StatusOK, list)
 }
 
 func H_LogsGet(c *gin.Context) {
@@ -124,7 +125,7 @@ func H_LogsGet(c *gin.Context) {
 		proto.Unmarshal(item, &pb)
 		list[i] = &pb
 	}
-	c.JSON(http.StatusOK, gin.H{"result": list})
+	c.JSON(http.StatusOK, list)
 }
 
 func H_Notify(c *gin.Context) {
