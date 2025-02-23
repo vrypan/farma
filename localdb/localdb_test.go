@@ -11,7 +11,7 @@ func TestBasic(t *testing.T) {
 	}
 	defer Close()
 
-	key := "testKey"
+	key := []byte("testKey")
 	value := "testValue"
 
 	// Store the key/value

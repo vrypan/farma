@@ -129,7 +129,7 @@ func H_LogsGet(c *gin.Context) {
 	c.JSON(http.StatusOK, list)
 }
 
-func H_Notify(c *gin.Context) {
+func H_Notify_old(c *gin.Context) {
 	var requestBody struct {
 		FrameId uint64 `json:"frameId"`
 		Title   string `json:"title"`
@@ -230,4 +230,88 @@ func H_DbKeysGet(c *gin.Context) {
 
 func H_Version(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"version": config.FARMA_VERSION})
+}
+
+func H_Notify(c *gin.Context) {
+	var requestBody struct {
+		FrameId uint64   `json:"frameId"`
+		Title   string   `json:"title"`
+		Body    string   `json:"body"`
+		Url     string   `json:"url"`
+		UserIds []uint64 `json:"userIds"`
+	}
+
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+
+	frame := utils.NewFrame().FromId(requestBody.FrameId)
+	if frame.Id == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "FRAME NOT FOUND"})
+		return
+	}
+
+	if requestBody.Url == "" {
+		requestBody.Url = "https://" + frame.Domain
+	}
+
+	keys := make(map[string][][]byte)
+
+	if len(requestBody.UserIds) == 0 {
+		requestBody.UserIds = append(requestBody.UserIds, 0)
+	}
+	for _, userId := range requestBody.UserIds {
+		prefix := []byte("s:url:" + strconv.Itoa(int(requestBody.FrameId)) + ":")
+		if userId != 0 {
+			prefix = append(prefix, strconv.Itoa(int(userId))+":"...)
+		}
+
+		startKey := prefix
+		for {
+			urlKeys, nextKey, err := db.GetKeysWithPrefix(prefix, startKey, 1000)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err})
+				return
+			}
+			for _, urlKeyBytes := range urlKeys {
+				urlKey := utils.UrlKey{}.DecodeBytes(urlKeyBytes)
+				if urlKey.Status == utils.SubscriptionStatus_SUBSCRIBED || urlKey.Status == utils.SubscriptionStatus_RATE_LIMITED {
+					keys[urlKey.Endpoint] = append(keys[urlKey.Endpoint], urlKeyBytes)
+				}
+			}
+			startKey = nextKey
+			if len(urlKeys) < 1000 {
+				break
+			}
+		}
+	}
+
+	notificationId := ""
+	notificationCount := 0
+	for url, urlKeys := range keys {
+		notification := utils.NewNotification(
+			notificationId,
+			requestBody.Title,
+			requestBody.Body,
+			requestBody.Url,
+			url,
+			urlKeys,
+		)
+		notificationId = notification.Id
+		notificationCount += len(urlKeys)
+		c.JSON(http.StatusOK, gin.H{
+			"NotificationId": notificationId,
+			"Count":          notificationCount,
+		})
+		if err := notification.Send(); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"NotificationId": notificationId,
+		"Count":          notificationCount,
+	})
 }
