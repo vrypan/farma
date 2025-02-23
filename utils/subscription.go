@@ -117,11 +117,10 @@ func (s *Subscription) VerifyAppId(hub *fctools.FarcasterHub) *Subscription {
 func (s *Subscription) Save() error {
 	subscriptionKey := s.Key(s.FrameId, s.UserId, s.AppId)
 
-	exSubBytes, _ := db.Get([]byte(subscriptionKey))
 	var exSub *Subscription
+	exSub.FromKey(s.FrameId, s.UserId, s.AppId)
 	// Is there an existing subscription in the database?
-	if exSubBytes != nil {
-		proto.Unmarshal(exSubBytes, exSub)
+	if exSub != nil {
 		s.Ctime = exSub.GetCtime()
 		urlKey := UrlKey{}.FromSubscription(exSub)
 		urlKey.Delete()
