@@ -117,8 +117,7 @@ func (s *Subscription) VerifyAppId(hub *fctools.FarcasterHub) *Subscription {
 func (s *Subscription) Save() error {
 	subscriptionKey := s.Key(s.FrameId, s.UserId, s.AppId)
 
-	var exSub *Subscription
-	exSub.FromKey(s.FrameId, s.UserId, s.AppId)
+	exSub := NewSubscription().FromKey(s.FrameId, s.UserId, s.AppId)
 	// Is there an existing subscription in the database?
 	if exSub != nil {
 		s.Ctime = exSub.GetCtime()
