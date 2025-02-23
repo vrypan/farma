@@ -72,3 +72,7 @@ func (k UrlKey) Set(subscriptionKey []byte) error {
 func (k UrlKey) Get() ([]byte, error) {
 	return db.Get(k.Bytes())
 }
+
+func (k UrlKey) Delete() error {
+	return db.Delete(k.Bytes())
+}

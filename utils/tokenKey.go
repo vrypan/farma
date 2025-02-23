@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+
+	db "github.com/vrypan/farma/localdb"
 )
 
 type TokenKey struct {
@@ -31,4 +33,16 @@ func (k TokenKey) DecodeString(s string) TokenKey {
 	return TokenKey{
 		Token: token,
 	}
+}
+
+func (k TokenKey) Set(subscriptionKey []byte) error {
+	err := db.Set(k.Bytes(), subscriptionKey)
+	return err
+}
+
+func (k TokenKey) Get() ([]byte, error) {
+	return db.Get(k.Bytes())
+}
+func (k TokenKey) Delete() error {
+	return db.Delete(k.Bytes())
 }

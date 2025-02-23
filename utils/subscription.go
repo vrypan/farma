@@ -50,7 +50,7 @@ func DecodeKey(key []byte) *Subscription {
 	return s
 }
 func (s *Subscription) FromHttpEvent(data []byte) (*Subscription, EventType) {
-	var jsonBody map[string]interface{}
+	var jsonBody map[string]any
 	if err := json.Unmarshal(data, &jsonBody); err != nil {
 		fmt.Println("Error decoding JSON:", err)
 		return s, EventType_NONE
@@ -60,27 +60,27 @@ func (s *Subscription) FromHttpEvent(data []byte) (*Subscription, EventType) {
 	header, _ := base64.RawURLEncoding.DecodeString(jsonBody["header"].(string))
 	payloadDecoded, _ := base64.RawURLEncoding.DecodeString(jsonBody["payload"].(string))
 
-	var headerData map[string]interface{}
+	var headerData map[string]any
 
 	if err := json.Unmarshal(header, &headerData); err == nil {
 		s.UserId = uint64(headerData["fid"].(float64))
 		s.AppKey = HexToBytes(headerData["key"].(string))
 	}
 
-	var payloadData map[string]interface{}
+	var payloadData map[string]any
 	evtType := EventType_NONE
 	if err := json.Unmarshal(payloadDecoded, &payloadData); err == nil {
 		eventName := payloadData["event"].(string)
 		switch eventName {
 		case "frame_added":
 			s.Status = SubscriptionStatus_SUBSCRIBED
-			if notifDetails, ok := payloadData["notificationDetails"].(map[string]interface{}); ok {
+			if notifDetails, ok := payloadData["notificationDetails"].(map[string]any); ok {
 				s.Url = notifDetails["url"].(string)
 				s.Token = notifDetails["token"].(string)
 			}
 		case "notifications_enabled":
 			s.Status = SubscriptionStatus_SUBSCRIBED
-			if notifDetails, ok := payloadData["notificationDetails"].(map[string]interface{}); ok {
+			if notifDetails, ok := payloadData["notificationDetails"].(map[string]any); ok {
 				s.Url = notifDetails["url"].(string)
 				s.Token = notifDetails["token"].(string)
 			}
@@ -115,6 +115,45 @@ func (s *Subscription) VerifyAppId(hub *fctools.FarcasterHub) *Subscription {
 }
 
 func (s *Subscription) Save() error {
+	subscriptionKey := s.Key(s.FrameId, s.UserId, s.AppId)
+
+	exSubBytes, _ := db.Get([]byte(subscriptionKey))
+	var exSub *Subscription
+	// Is there an existing subscription in the database?
+	if exSubBytes != nil {
+		proto.Unmarshal(exSubBytes, exSub)
+		s.Ctime = exSub.GetCtime()
+		urlKey := UrlKey{}.FromSubscription(exSub)
+		urlKey.Delete()
+		if exSub.GetToken() != "" {
+			tokenKey := NewTokenKey(exSub.GetToken())
+			tokenKey.Delete()
+		}
+	} else {
+		s.Ctime = timestamppb.Now()
+	}
+
+	tokenKey := NewTokenKey(s.Token)
+	urlKey := UrlKey{}.FromSubscription(s)
+	s.Mtime = timestamppb.Now()
+
+	data, err := proto.Marshal(s)
+	if err != nil {
+		return err
+	}
+	if err = db.Set([]byte(subscriptionKey), data); err != nil {
+		return err
+	}
+	if err = tokenKey.Set([]byte(subscriptionKey)); err != nil {
+		return err
+	}
+	if err = urlKey.Set([]byte(subscriptionKey)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Subscription) Save_old() error {
 	subscriptionKey := s.Key(s.FrameId, s.UserId, s.AppId)
 
 	newTokenKey := NewTokenKey(s.Token)
