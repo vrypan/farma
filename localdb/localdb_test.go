@@ -34,13 +34,15 @@ func TestBasic(t *testing.T) {
 	}
 }
 
+const TOTAL_TEST_KEYS = 980
+
 func TestGetKeysWithPrefix(t *testing.T) {
 	err := Open()
 	if err != nil {
 		t.Fatalf("Failed to open database: %v", err)
 	}
 	defer Close()
-	for i := range 1000 {
+	for i := range TOTAL_TEST_KEYS {
 		key := fmt.Appendf([]byte(""), "testKey:%05d", i)
 		value := fmt.Appendf([]byte(""), "testValue:%05d", i)
 		// Store the key/value
@@ -69,8 +71,8 @@ func TestGetKeysWithPrefix(t *testing.T) {
 		}
 		next = n
 	}
-	if count != 1000 {
-		t.Errorf("Expected 1000 keys, got %d", count)
+	if count != TOTAL_TEST_KEYS {
+		t.Errorf("Expected %d keys, got %d", TOTAL_TEST_KEYS, count)
 	}
 	t.Logf("Inserted %d, feteched %d keys\n", count, count)
 }

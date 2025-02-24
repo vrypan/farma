@@ -205,7 +205,8 @@ func GetPrefixP(prefix []byte, startKey []byte, limit int) (items [][]byte, last
 }
 
 // Return the keys that match the prefix.
-// lastKey is the last key that was returned, which can be used as the next cursor.
+// lastKey is the next key that is not returned, which can be used
+// in a subsequent call to GetKeysWithPrefix.
 func GetKeysWithPrefix(prefix []byte, startKey []byte, limit int) (items [][]byte, nextKey []byte, err error) {
 	err = db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
