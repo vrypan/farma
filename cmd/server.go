@@ -5,6 +5,9 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"crypto/hmac"
@@ -115,7 +118,24 @@ func ginServer(cmd *cobra.Command, args []string) {
 	router.GET("/api/v1/version", api.H_Version)
 	router.POST("/f/:id", api.WebhookHandler(hub))
 
-	log.Printf("Starting farma %s\n", config.FARMA_VERSION)
-	log.Printf("Listening and serving HTTP on %s", serverAddr)
-	router.Run(serverAddr)
+	server := &http.Server{
+		Addr:    serverAddr,
+		Handler: router,
+	}
+	go func() {
+		log.Printf("Starting farma %s\n", config.FARMA_VERSION)
+		log.Printf("Listening and serving HTTP on %s", serverAddr)
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			panic(err)
+		}
+	}()
+
+	c := make(chan os.Signal, 2)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+	<-c // block until signal received
+
+	log.Println("Shutting down Farma")
+	server.Shutdown(nil)
+	//router.Run(serverAddr)
 }
