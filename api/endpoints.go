@@ -129,83 +129,6 @@ func H_LogsGet(c *gin.Context) {
 	c.JSON(http.StatusOK, list)
 }
 
-func H_Notify_old(c *gin.Context) {
-	var requestBody struct {
-		FrameId uint64 `json:"frameId"`
-		Title   string `json:"title"`
-		Body    string `json:"body"`
-		Url     string `json:"url"`
-	}
-
-	if err := c.ShouldBindJSON(&requestBody); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
-		return
-	}
-	frame := models.NewFrame().FromId(requestBody.FrameId)
-	if frame.Id == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "FRAME NOT FOUND"})
-		return
-	}
-
-	// Warpcast will crash when an notificationUrl is clicked.
-	if requestBody.Url == "" {
-		requestBody.Url = "https://" + frame.Domain
-	}
-
-	keys := make(map[string][][]byte)
-
-	prefix := []byte("s:url:" + strconv.Itoa(int(requestBody.FrameId)) + ":")
-
-	startKey := prefix
-	for {
-		urlKeys, nextKey, err := db.GetKeysWithPrefix(prefix, startKey, 1000)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err})
-			return
-		}
-		for _, urlKeyBytes := range urlKeys {
-			urlKey := models.UrlKey{}.DecodeBytes(urlKeyBytes)
-			status := urlKey.Status
-			url := urlKey.Endpoint
-			if status == models.SubscriptionStatus_SUBSCRIBED || status == models.SubscriptionStatus_RATE_LIMITED {
-				keys[url] = append(keys[url], urlKeyBytes)
-			}
-		}
-		startKey = nextKey
-		if len(urlKeys) < 1000 {
-			break
-		}
-	}
-
-	notificationId := ""
-	notificationCount := 0
-	for url, urlKeys := range keys {
-		notification := models.NewNotification(
-			notificationId,
-			requestBody.Title,
-			requestBody.Body,
-			requestBody.Url,
-			url,
-			urlKeys,
-		)
-		notificationId = notification.Id
-		notificationCount += len(urlKeys)
-		err := notification.Send()
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err})
-			return
-		}
-	}
-	responseJson := struct {
-		NotificationId string
-		Count          int
-	}{
-		NotificationId: notificationId,
-		Count:          notificationCount,
-	}
-	c.JSON(http.StatusOK, responseJson)
-}
-
 func H_DbKeysGet(c *gin.Context) {
 	prefix := c.Param("prefix")[1:]
 
@@ -233,6 +156,8 @@ func H_Version(c *gin.Context) {
 }
 
 func H_Notify(c *gin.Context) {
+	var ver int
+	var err error
 	var requestBody struct {
 		FrameId uint64   `json:"frameId"`
 		Title   string   `json:"title"`
@@ -300,18 +225,20 @@ func H_Notify(c *gin.Context) {
 		)
 		notificationId = notification.Id
 		notificationCount += len(urlKeys)
-		c.JSON(http.StatusOK, gin.H{
-			"NotificationId": notificationId,
-			"Count":          notificationCount,
-		})
 		if err := notification.Send(); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+			return
+		}
+		ver, err = notification.Save()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
 			return
 		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"NotificationId": notificationId,
-		"Count":          notificationCount,
+		"NotificationId":      notificationId,
+		"NotificationVersion": ver,
+		"Count":               notificationCount,
 	})
 }

@@ -68,11 +68,11 @@ func WebhookHandler(hub *fctools.FarcasterHub) gin.HandlerFunc {
 			return
 		}
 		ulog := models.UserLog{
-			FrameId:      subscription.FrameId,
-			UserId:       subscription.UserId,
-			AppId:        subscription.AppId,
-			EvtType:      eventType,
-			EventContext: "",
+			FrameId:    subscription.FrameId,
+			UserId:     subscription.UserId,
+			AppId:      subscription.AppId,
+			EvtType:    eventType,
+			EvtContext: &models.UserLog_EventContextOther{},
 		}
 		err = ulog.Save()
 

@@ -59,6 +59,7 @@ func cliNotificationSend(cmd *cobra.Command, args []string) {
 	}
 	var data struct {
 		NotificationId string
+		Version        int
 		Count          int
 	}
 
