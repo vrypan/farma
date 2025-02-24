@@ -6,7 +6,7 @@ import (
 	db "github.com/vrypan/farma/localdb"
 )
 
-func TestBasic(t *testing.T) {
+func TestUrlKey_Basic(t *testing.T) {
 	db.Open()
 	key := UrlKey{
 		FrameId:  1,
