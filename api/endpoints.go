@@ -8,14 +8,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/vrypan/farma/config"
 	db "github.com/vrypan/farma/localdb"
-	"github.com/vrypan/farma/utils"
+	"github.com/vrypan/farma/models"
 	"google.golang.org/protobuf/proto"
 )
 
 func H_FramesGet(c *gin.Context) {
 	idStr := c.Param("id")[1:]
 	if idStr == "" {
-		frames := utils.AllFrames()
+		frames := models.AllFrames()
 		c.JSON(http.StatusOK, frames)
 		return
 	}
@@ -25,8 +25,8 @@ func H_FramesGet(c *gin.Context) {
 		return
 	}
 
-	frame := utils.NewFrame().FromId(id)
-	frames := append([]*utils.Frame{}, frame)
+	frame := models.NewFrame().FromId(id)
+	frames := append([]*models.Frame{}, frame)
 	if frame == nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "FRAME_NOT_FOUND"})
 		return
@@ -44,7 +44,7 @@ func H_FrameAdd(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		return
 	}
-	frame := utils.NewFrame()
+	frame := models.NewFrame()
 	err := frame.FromName(requestBody.Name)
 	if err == nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
@@ -91,9 +91,9 @@ func H_SubscriptionsGet(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 	}
-	list := make([]*utils.Subscription, len(data))
+	list := make([]*models.Subscription, len(data))
 	for i, item := range data {
-		var pb utils.Subscription
+		var pb models.Subscription
 		proto.Unmarshal(item, &pb)
 		list[i] = &pb
 	}
@@ -120,9 +120,9 @@ func H_LogsGet(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 	}
-	list := make([]*utils.UserLog, len(data))
+	list := make([]*models.UserLog, len(data))
 	for i, item := range data {
-		var pb utils.UserLog
+		var pb models.UserLog
 		proto.Unmarshal(item, &pb)
 		list[i] = &pb
 	}
@@ -141,7 +141,7 @@ func H_Notify_old(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		return
 	}
-	frame := utils.NewFrame().FromId(requestBody.FrameId)
+	frame := models.NewFrame().FromId(requestBody.FrameId)
 	if frame.Id == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "FRAME NOT FOUND"})
 		return
@@ -164,10 +164,10 @@ func H_Notify_old(c *gin.Context) {
 			return
 		}
 		for _, urlKeyBytes := range urlKeys {
-			urlKey := utils.UrlKey{}.DecodeBytes(urlKeyBytes)
+			urlKey := models.UrlKey{}.DecodeBytes(urlKeyBytes)
 			status := urlKey.Status
 			url := urlKey.Endpoint
-			if status == utils.SubscriptionStatus_SUBSCRIBED || status == utils.SubscriptionStatus_RATE_LIMITED {
+			if status == models.SubscriptionStatus_SUBSCRIBED || status == models.SubscriptionStatus_RATE_LIMITED {
 				keys[url] = append(keys[url], urlKeyBytes)
 			}
 		}
@@ -180,7 +180,7 @@ func H_Notify_old(c *gin.Context) {
 	notificationId := ""
 	notificationCount := 0
 	for url, urlKeys := range keys {
-		notification := utils.NewNotification(
+		notification := models.NewNotification(
 			notificationId,
 			requestBody.Title,
 			requestBody.Body,
@@ -246,7 +246,7 @@ func H_Notify(c *gin.Context) {
 		return
 	}
 
-	frame := utils.NewFrame().FromId(requestBody.FrameId)
+	frame := models.NewFrame().FromId(requestBody.FrameId)
 	if frame.Id == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "FRAME NOT FOUND"})
 		return
@@ -275,8 +275,8 @@ func H_Notify(c *gin.Context) {
 				return
 			}
 			for _, urlKeyBytes := range urlKeys {
-				urlKey := utils.UrlKey{}.DecodeBytes(urlKeyBytes)
-				if urlKey.Status == utils.SubscriptionStatus_SUBSCRIBED || urlKey.Status == utils.SubscriptionStatus_RATE_LIMITED {
+				urlKey := models.UrlKey{}.DecodeBytes(urlKeyBytes)
+				if urlKey.Status == models.SubscriptionStatus_SUBSCRIBED || urlKey.Status == models.SubscriptionStatus_RATE_LIMITED {
 					keys[urlKey.Endpoint] = append(keys[urlKey.Endpoint], urlKeyBytes)
 				}
 			}
@@ -290,7 +290,7 @@ func H_Notify(c *gin.Context) {
 	notificationId := ""
 	notificationCount := 0
 	for url, urlKeys := range keys {
-		notification := utils.NewNotification(
+		notification := models.NewNotification(
 			notificationId,
 			requestBody.Title,
 			requestBody.Body,

@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/vrypan/farma/api"
-	"github.com/vrypan/farma/utils"
+	"github.com/vrypan/farma/models"
 )
 
 var cliFramesListCmd = &cobra.Command{
@@ -35,7 +35,7 @@ func cliFramesList(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	var list []*utils.Frame
+	var list []*models.Frame
 	if err := json.Unmarshal(res, &list); err != nil {
 		fmt.Printf("Failed to parse response: %v", err)
 		return

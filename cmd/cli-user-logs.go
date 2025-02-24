@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/vrypan/farma/api"
-	"github.com/vrypan/farma/utils"
+	"github.com/vrypan/farma/models"
 )
 
 var cliLogsCmd = &cobra.Command{
@@ -37,7 +37,7 @@ func cliLogs(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	var list []*utils.UserLog
+	var list []*models.UserLog
 	if err := json.Unmarshal(res, &list); err != nil {
 		fmt.Printf("Failed to parse response: %v", err)
 		return

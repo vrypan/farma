@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/vrypan/farma/api"
-	"github.com/vrypan/farma/utils"
+	"github.com/vrypan/farma/models"
 )
 
 var cliFrameAddCmd = &cobra.Command{
@@ -43,7 +43,7 @@ func cliFrameAdd(cmd *cobra.Command, args []string) {
 		fmt.Printf("Failed to make API call: %v %s\n", err, res)
 		return
 	}
-	var data utils.Frame
+	var data models.Frame
 
 	if err := json.Unmarshal(res, &data); err != nil {
 		fmt.Printf("Failed to parse response: %v", err)

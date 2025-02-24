@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/vrypan/farma/fctools"
-	"github.com/vrypan/farma/utils"
+	"github.com/vrypan/farma/models"
 )
 
 func isValidPath(path string) bool {
@@ -40,7 +40,7 @@ func WebhookHandler(hub *fctools.FarcasterHub) gin.HandlerFunc {
 			return
 		}
 
-		frame := utils.NewFrame()
+		frame := models.NewFrame()
 		if err := frame.FromEndpoint(c.Request.URL.Path); err != nil {
 			//serverLog(r, http.StatusNotFound, err.Error())
 			c.AbortWithStatus(http.StatusNotFound)
@@ -56,7 +56,7 @@ func WebhookHandler(hub *fctools.FarcasterHub) gin.HandlerFunc {
 			return
 		}
 
-		subscription, eventType := utils.NewSubscription().FromHttpEvent(body)
+		subscription, eventType := models.NewSubscription().FromHttpEvent(body)
 		subscription.VerifyAppId(hub)
 		subscription.FrameId = frame.Id
 		if err = subscription.Save(); err != nil {
@@ -67,7 +67,7 @@ func WebhookHandler(hub *fctools.FarcasterHub) gin.HandlerFunc {
 			c.String(http.StatusInternalServerError, "Error updating db")
 			return
 		}
-		ulog := utils.UserLog{
+		ulog := models.UserLog{
 			FrameId:      subscription.FrameId,
 			UserId:       subscription.UserId,
 			AppId:        subscription.AppId,
