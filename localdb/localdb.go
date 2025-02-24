@@ -206,21 +206,25 @@ func GetPrefixP(prefix []byte, startKey []byte, limit int) (items [][]byte, last
 
 // Return the keys that match the prefix.
 // lastKey is the last key that was returned, which can be used as the next cursor.
-func GetKeysWithPrefix(prefix []byte, startKey []byte, limit int) (items [][]byte, lastKey []byte, err error) {
+func GetKeysWithPrefix(prefix []byte, startKey []byte, limit int) (items [][]byte, nextKey []byte, err error) {
 	err = db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
 		count := 0
-		for it.Seek(startKey); it.ValidForPrefix(prefix) && count < limit; it.Next() {
+		for it.Seek(startKey); it.ValidForPrefix(prefix) && count <= limit; it.Next() {
 			item := it.Item()
 			k := item.Key()
+			nextKey = k
+			if count == limit {
+				break
+			}
 			items = append(items, k)
-			lastKey = k
+			nextKey = nil
 			count++
 		}
 		return nil
 	})
 
 	// Return keys and the last key as the next cursor
-	return items, lastKey, err
+	return items, nextKey, err
 }
