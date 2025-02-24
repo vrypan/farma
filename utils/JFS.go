@@ -1,4 +1,4 @@
-package models
+package utils
 
 import (
 	"crypto/ed25519"
