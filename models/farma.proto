@@ -43,15 +43,6 @@ message Subscription {
     bytes appKey = 11;
 }
 
-message UserLog {
-    uint64 frameId = 1;
-    uint64 userId = 2;
-    uint64 appId = 3;
-    EventType evtType = 4;
-    string eventContext = 5;
-    google.protobuf.Timestamp ctime = 6;
-}
-
 message Notification {
     string id = 1;
     string endpoint = 2;
@@ -63,4 +54,27 @@ message Notification {
     repeated string failedTokens = 8;
     repeated string rateLimitedTokens = 9;
     google.protobuf.Timestamp ctime = 10;
+    optional uint64 version = 11;
+}
+
+message UserLog {
+    uint64 frameId = 1;
+    uint64 userId = 2;
+    uint64 appId = 3;
+    EventType evtType = 4;
+    //string eventContext = 5;
+    google.protobuf.Timestamp ctime = 6;
+    oneof evtContext {
+        EventContextNotification eventContextNotification = 7;
+        EventContextOther eventContextOther = 8;
+    }
+}
+
+message EventContextNotification {
+    string id = 1;
+    uint64 version = 2;
+    string token = 3;
+}
+message EventContextOther {
+    string context = 1;
 }

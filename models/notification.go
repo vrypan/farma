@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	db "github.com/vrypan/farma/localdb"
+	"google.golang.org/protobuf/proto"
 )
 
 func NewNotification(
@@ -39,7 +40,12 @@ func NewNotification(
 }
 
 func (n *Notification) Send() error {
-	data := map[string]interface{}{
+	_, err := n.Save()
+	if err != nil {
+		return fmt.Errorf("Error saving notification: %w", err)
+	}
+
+	data := map[string]any{
 		"notificationId": n.Id,
 		"title":          n.Title,
 		"body":           n.Message,
@@ -92,6 +98,7 @@ func (n *Notification) Send() error {
 	n.SuccessTokens = responseBody.Result.SuccessfulTokens
 	n.FailedTokens = responseBody.Result.InvalidTokens
 	n.RateLimitedTokens = responseBody.Result.RateLimitedTokens
+	context := EventContextNotification{Id: n.Id, Version: *n.Version}
 	for _, token := range n.SuccessTokens {
 		tokenKey := NewTokenKey(token)
 		subscriptionKey, err := db.Get(tokenKey.Bytes())
@@ -103,11 +110,11 @@ func (n *Notification) Send() error {
 		}
 		subscription := DecodeKey(subscriptionKey)
 		l := UserLog{
-			FrameId:      subscription.FrameId,
-			UserId:       subscription.UserId,
-			AppId:        subscription.AppId,
-			EvtType:      EventType_NOTIFICATION_SENT,
-			EventContext: token,
+			FrameId:    subscription.FrameId,
+			UserId:     subscription.UserId,
+			AppId:      subscription.AppId,
+			EvtType:    EventType_NOTIFICATION_SENT,
+			EvtContext: &UserLog_EventContextNotification{EventContextNotification: &context},
 		}
 		err = l.Save()
 		if err != nil {
@@ -125,11 +132,11 @@ func (n *Notification) Send() error {
 		}
 		subscription := DecodeKey(subscriptionKey)
 		l := UserLog{
-			FrameId:      subscription.FrameId,
-			UserId:       subscription.UserId,
-			AppId:        subscription.AppId,
-			EvtType:      EventType_NOTIFICATION_FAILED_INVALID,
-			EventContext: token,
+			FrameId:    subscription.FrameId,
+			UserId:     subscription.UserId,
+			AppId:      subscription.AppId,
+			EvtType:    EventType_NOTIFICATION_FAILED_INVALID,
+			EvtContext: &UserLog_EventContextNotification{EventContextNotification: &context},
 		}
 		err = l.Save()
 		if err != nil {
@@ -153,11 +160,11 @@ func (n *Notification) Send() error {
 		}
 		subscription := DecodeKey(subscriptionKey)
 		l := UserLog{
-			FrameId:      subscription.FrameId,
-			UserId:       subscription.UserId,
-			AppId:        subscription.AppId,
-			EvtType:      EventType_NOTIFICATION_FAILED_RATE_LIMIT,
-			EventContext: token,
+			FrameId:    subscription.FrameId,
+			UserId:     subscription.UserId,
+			AppId:      subscription.AppId,
+			EvtType:    EventType_NOTIFICATION_FAILED_RATE_LIMIT,
+			EvtContext: &UserLog_EventContextNotification{EventContextNotification: &context},
 		}
 		err = l.Save()
 		if err != nil {
@@ -170,4 +177,68 @@ func (n *Notification) Send() error {
 		urlKey.Set(subscriptionKey)
 	}
 	return nil
+}
+
+func (n *Notification) Prefix() string {
+	return "n:" + n.Id + ":000:"
+}
+func (n *Notification) PrefixBytes() []byte {
+	return []byte("n:" + n.Id + ":000:")
+}
+
+func (n *Notification) Save() (int, error) {
+	nextVersion := uint64(0)
+	var err error
+	prefix := []byte("n:" + n.Id + ":")
+	for {
+		keys, next, err := db.GetKeysWithPrefix(prefix, prefix, 100)
+		if err != nil {
+			return 0, fmt.Errorf("Error getting keys: %v", err)
+		}
+		nextVersion += uint64(len(keys))
+		if next == nil {
+			break
+		}
+	}
+	nextKey := []byte("n:" + n.Id + ":" + fmt.Sprintf("%03d", nextVersion))
+	n.Version = &nextVersion
+	notificationBytes, err := proto.Marshal(n)
+	if err != nil {
+		return 0, fmt.Errorf("Error marshaling notification: %v", err)
+	}
+	err = db.Set(nextKey, notificationBytes)
+	if err != nil {
+		return 0, fmt.Errorf("Error putting notification: %v", err)
+	}
+	return int(nextVersion), nil
+}
+
+func (n *Notification) Load(id string) ([]*Notification, error) {
+	var notifications []*Notification
+	prefix := []byte("n:" + id + ":")
+	next := []byte("n:" + id + ":0")
+	for {
+		keys, next, err := db.GetKeysWithPrefix(prefix, next, 100)
+		if err != nil {
+			return nil, fmt.Errorf("Error getting keys: %v", err)
+		}
+		if len(keys) > 0 {
+			for _, key := range keys {
+				value, err := db.Get(key)
+				if err != nil {
+					return nil, fmt.Errorf("Error getting key %s: %v", key, err)
+				}
+				notification := Notification{}
+				err = proto.Unmarshal(value, &notification)
+				if err != nil {
+					return nil, fmt.Errorf("Error unmarshaling value for key %s: %v", key, err)
+				}
+				notifications = append(notifications, &notification)
+			}
+		}
+		if next == nil {
+			break
+		}
+	}
+	return notifications, nil
 }
