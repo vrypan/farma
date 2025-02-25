@@ -243,7 +243,7 @@ func H_Notify(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err})
 			return
 		}
-		ver, err = notification.Save()
+		ver, err = notification.Update()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
 			return

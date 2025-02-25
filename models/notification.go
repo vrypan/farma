@@ -180,16 +180,16 @@ func (n *Notification) Send() error {
 }
 
 func (n *Notification) Prefix() string {
-	return "n:" + n.Id + ":000:"
+	return "n:id:" + n.Id + ":000:"
 }
 func (n *Notification) PrefixBytes() []byte {
-	return []byte("n:" + n.Id + ":000:")
+	return []byte("n:id:" + n.Id + ":000:")
 }
 
 func (n *Notification) Save() (int, error) {
 	nextVersion := uint64(0)
 	var err error
-	prefix := []byte("n:" + n.Id + ":")
+	prefix := []byte("n:id:" + n.Id + ":")
 	for {
 		keys, next, err := db.GetKeysWithPrefix(prefix, prefix, 100)
 		if err != nil {
@@ -200,7 +200,7 @@ func (n *Notification) Save() (int, error) {
 			break
 		}
 	}
-	nextKey := []byte("n:" + n.Id + ":" + fmt.Sprintf("%03d", nextVersion))
+	nextKey := []byte("n:id:" + n.Id + ":" + fmt.Sprintf("%03d", nextVersion))
 	n.Version = &nextVersion
 	notificationBytes, err := proto.Marshal(n)
 	if err != nil {
@@ -208,15 +208,28 @@ func (n *Notification) Save() (int, error) {
 	}
 	err = db.Set(nextKey, notificationBytes)
 	if err != nil {
-		return 0, fmt.Errorf("Error putting notification: %v", err)
+		return 0, fmt.Errorf("Error saving notification: %v", err)
 	}
 	return int(nextVersion), nil
 }
 
+func (n *Notification) Update() (int, error) {
+	key := []byte("n:id:" + n.Id + ":" + fmt.Sprintf("%03d", n.GetVersion()))
+	notificationBytes, err := proto.Marshal(n)
+	if err != nil {
+		return 0, fmt.Errorf("Error marshaling notification: %v", err)
+	}
+	err = db.Set(key, notificationBytes)
+	if err != nil {
+		return 0, fmt.Errorf("Error saving notification: %v", err)
+	}
+	return int(*n.Version), nil
+}
+
 func (n *Notification) Load(id string) ([]*Notification, error) {
 	var notifications []*Notification
-	prefix := []byte("n:" + id + ":")
-	next := []byte("n:" + id + ":0")
+	prefix := []byte("n:id:" + id + ":")
+	next := []byte("n:id:" + id + ":0")
 	for {
 		keys, next, err := db.GetKeysWithPrefix(prefix, next, 100)
 		if err != nil {
