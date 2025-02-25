@@ -1,19 +1,19 @@
 package models
 
 import (
-	"fmt"
 	"testing"
 
 	db "github.com/vrypan/farma/localdb"
 )
 
-func cleanup() int {
-	keys, _, _ := db.GetKeysWithPrefix([]byte("n:test-"), []byte("n:test-"), 1000)
+func cleanup(t *testing.T) int {
+	keys, _, _ := db.GetKeysWithPrefix([]byte("n:id:test-"), []byte("n:id:test-"), 1000)
 	for _, key := range keys {
 		err := db.Delete(key)
 		if err != nil {
-			fmt.Printf("Error deleting key %s: %v\n", key, err)
+			t.Logf("Error deleting key %s: %v\n", key, err)
 		}
+		//t.Logf("Deleted key %s\n", key)
 	}
 	return len(keys)
 }
@@ -21,7 +21,7 @@ func cleanup() int {
 func TestNotification_Save_Load(t *testing.T) {
 	db.Open()
 	defer db.Close()
-	cleanup()
+	cleanup(t)
 	n := NewNotification(
 		"test-0001",
 		"Test title",
@@ -59,15 +59,15 @@ func TestNotification_Save_Load(t *testing.T) {
 	if err := db.Delete(n.PrefixBytes()); err != nil {
 		t.Errorf("Error deleting notification: %v", err)
 	}
-	if cleanup() != 1 {
-		t.Errorf("Expected cleanup to return 1, got %d", cleanup())
+	if c := cleanup(t); c != 1 {
+		t.Errorf("Expected cleanup to return 1, got %d", c)
 	}
 }
 
 func TestNotification_Versions(t *testing.T) {
 	db.Open()
 	defer db.Close()
-	cleanup()
+	cleanup(t)
 	n := NewNotification(
 		"test-0002",
 		"Test title",
@@ -128,8 +128,8 @@ func TestNotification_Versions(t *testing.T) {
 		}
 	}
 
-	if cleanup() != 3 {
-		t.Errorf("Expected cleanup to return 1, got %d", cleanup())
+	if c := cleanup(t); c != 3 {
+		t.Errorf("Expected cleanup to return 1, got %d", c)
 	}
 }
 
