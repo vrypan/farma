@@ -18,6 +18,7 @@ type Request struct {
 	Date      string
 	Signature string
 	Body      []byte
+	Query     string
 }
 
 func (r *Request) Sign(key []byte) *Request {
@@ -66,7 +67,7 @@ func (r *Request) Send(server string) ([]byte, error) {
 	}
 
 	client := &http.Client{}
-	req, err := http.NewRequest(r.Method, fmt.Sprintf("%s%s", server, r.Path), bytes.NewBuffer(r.Body))
+	req, err := http.NewRequest(r.Method, fmt.Sprintf("%s%s?%s", server, r.Path, r.Query), bytes.NewBuffer(r.Body))
 	if err != nil {
 		return nil, fmt.Errorf("Error creating request: %v", err)
 	}

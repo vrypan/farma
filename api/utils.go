@@ -8,7 +8,7 @@ import (
 	"github.com/vrypan/farma/config"
 )
 
-func ApiCall(method string, endpoint string, methodPath string, id string, body []byte) ([]byte, error) {
+func ApiCall(method string, endpoint string, methodPath string, id string, body []byte, rawQuery string) ([]byte, error) {
 	apiEndpointPath := methodPath
 
 	if endpoint == "" {
@@ -16,7 +16,6 @@ func ApiCall(method string, endpoint string, methodPath string, id string, body 
 	} else {
 		endpoint += apiEndpointPath
 	}
-
 	endpoint = fmt.Sprintf("%s%s", endpoint, id)
 
 	keyPrivate := config.GetString("key.private")
@@ -42,6 +41,7 @@ func ApiCall(method string, endpoint string, methodPath string, id string, body 
 		Method: method,
 		Path:   hostUrl.Path,
 		Body:   body,
+		Query:  rawQuery,
 	}
 	request.Sign(keyPrivateBytes)
 
