@@ -35,12 +35,18 @@ func cliFramesList(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	var list []*models.Frame
+	var list []json.RawMessage
+
 	if err := json.Unmarshal(res, &list); err != nil {
 		fmt.Printf("Failed to parse response: %v", err)
 		return
 	}
-	for _, item := range list {
+	for _, v := range list {
+		item := &models.Frame{}
+		if err := json.Unmarshal(v, item); err != nil {
+			fmt.Printf("Failed to parse frame: %v", err)
+			continue
+		}
 		fmt.Printf("%04d %-32s %45s %s\n", item.Id, item.Name, item.Webhook, item.Domain)
 	}
 
