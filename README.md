@@ -1,5 +1,3 @@
-**Don't use it yet, it's still pre-alpha.**
-
 ![farma-git-social](farma-git-social.png)
 
 # farma
@@ -76,19 +74,3 @@ farma provides a REST API to let you use it from your own applications.
 
 See: [Documentation/API.md](Documentation/API.md)
 
-# TODO
-
-- [x] Support multiple frames and multiple clients per user
-- [x] Handle subscriptions/unsubscriptions
-- [x] Group FIDs in batches of 100 when sending notifications
-- [x] Handle invalidTokens
-- [ ] Handle rateLimitedTokens
-- [x] Validate subscription signatures
-- [x] Validate AppKeys used to sign subscription signatures
-- [x] Log user subscription/unsubscriptions
-- [ ] Installation instructions
-- [ ] Support access to nodes that require authentication
-- [ ] Guide admins on how to use the commands, add checks
-- [x] Expose REST API (basic functionality)
-- [ ] Webhooks?
-- [ ] Log notifications sent
