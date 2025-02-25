@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/vrypan/farma/config"
 	db "github.com/vrypan/farma/localdb"
 	"github.com/vrypan/farma/models"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -91,11 +93,17 @@ func H_SubscriptionsGet(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 	}
-	list := make([]*models.Subscription, len(data))
+
+	list := make([]json.RawMessage, len(data))
 	for i, item := range data {
 		var pb models.Subscription
 		proto.Unmarshal(item, &pb)
-		list[i] = &pb
+		j, err := protojson.Marshal(&pb)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+		list[i] = j
 	}
 	c.JSON(http.StatusOK, list)
 }
@@ -120,11 +128,17 @@ func H_LogsGet(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 	}
-	list := make([]*models.UserLog, len(data))
+
+	list := make([]json.RawMessage, len(data))
 	for i, item := range data {
 		var pb models.UserLog
 		proto.Unmarshal(item, &pb)
-		list[i] = &pb
+		j, err := protojson.Marshal(&pb)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+		list[i] = j
 	}
 	c.JSON(http.StatusOK, list)
 }
