@@ -67,6 +67,7 @@ message UserLog {
     oneof evtContext {
         EventContextNotification eventContextNotification = 7;
         EventContextOther eventContextOther = 8;
+        EventContextNone eventContextNone = 9;
     }
 }
 
@@ -77,4 +78,6 @@ message EventContextNotification {
 }
 message EventContextOther {
     string context = 1;
+}
+message EventContextNone {
 }
