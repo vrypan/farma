@@ -43,7 +43,11 @@ func cliLogs(cmd *cobra.Command, args []string) {
 		return
 	}
 	for _, item := range list {
-		fmt.Printf("%06d %04d %04d %-45s %s\n",
+		fmt.Printf("%06d %04d %04d %-45s %s",
 			item.UserId, item.FrameId, item.AppId, item.EvtType.Enum(), item.Ctime.AsTime().Format(time.RFC3339))
+		if item.GetEventContextNotification() != nil {
+			fmt.Printf(" notification:%s", item.GetEventContextNotification().GetId())
+		}
+		fmt.Println()
 	}
 }
