@@ -44,7 +44,7 @@ func exportData(cmd *cobra.Command, args []string) {
 	exportEntities("l_user", []byte("l:user:"), outDir, &models.UserLog{})
 	exportEntities("s_id", []byte("s:id:"), outDir, &models.Subscription{})
 	exportEntities("f_id", []byte("f:id:"), outDir, &models.Frame{})
-	exportEntities("n_", []byte("n:"), outDir, &models.Notification{})
+	exportEntities("n_id", []byte("n:id:"), outDir, &models.Notification{})
 	exportKeys("f_name", []byte("f:name:"), outDir)
 	exportKeys("f_endpoint", []byte("f:endpoint:"), outDir)
 	exportKeys("s_url", []byte("s:url:"), outDir)

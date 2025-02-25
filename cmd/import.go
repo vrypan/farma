@@ -42,6 +42,7 @@ func importData(cmd *cobra.Command, args []string) {
 	processPbFile("s_id", outDir)
 	processPbFile("f_id", outDir)
 	processPbFile("l_user", outDir)
+	processPbFile("n_id", outDir)
 	processKvFile("f_name", outDir)
 	processKvFile("f_endpoint", outDir)
 	processKvFile("s_url", outDir)
@@ -136,6 +137,7 @@ func processEntities(jsonMap map[string]json.RawMessage, dataType string) {
 		"s_id":   func() proto.Message { return &models.Subscription{} },
 		"f_id":   func() proto.Message { return &models.Frame{} },
 		"l_user": func() proto.Message { return &models.UserLog{} },
+		"n_id":   func() proto.Message { return &models.Notification{} },
 	}
 
 	/*
