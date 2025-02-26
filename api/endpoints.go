@@ -15,28 +15,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func H_FramesGet_old(c *gin.Context) {
-	idStr := c.Param("id")[1:]
-	if idStr == "" {
-		frames := models.AllFrames()
-		c.JSON(http.StatusOK, frames)
-		return
-	}
-	id, err := strconv.ParseUint(idStr, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "INVALID_ID: " + idStr})
-		return
-	}
-
-	frame := models.NewFrame().FromId(id)
-	frames := append([]*models.Frame{}, frame)
-	if frame == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "FRAME_NOT_FOUND"})
-		return
-	}
-	c.JSON(http.StatusOK, frames)
-}
-
 func H_FrameAdd(c *gin.Context) {
 	var requestBody struct {
 		Name    string `json:"name"`

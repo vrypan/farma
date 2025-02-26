@@ -137,5 +137,4 @@ func ginServer(cmd *cobra.Command, args []string) {
 
 	log.Println("Shutting down Farma")
 	server.Shutdown(nil)
-	//router.Run(serverAddr)
 }

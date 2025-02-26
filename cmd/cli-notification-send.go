@@ -52,7 +52,7 @@ func cliNotificationSend(cmd *cobra.Command, args []string) {
 		"userIds": [` + userIdsStr + `]
 	}`
 
-	res, err := api.ApiCall(method, endpoint, apiEndpointPath, "", []byte(payload))
+	res, err := api.ApiCall(method, endpoint, apiEndpointPath, "", []byte(payload), "")
 	if err != nil {
 		fmt.Printf("Failed to make API call: %v %s\n", err, res)
 		return
