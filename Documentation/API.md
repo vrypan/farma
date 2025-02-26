@@ -118,7 +118,7 @@ Sample response:
     },
   ...
   ],
-  "next": ""next": "bDp1c2VyOjI4MDoyOjE3NDAyNTU5NzgK"
+  "next": "bDp1c2VyOjI4MDoyOjE3NDAyNTU5NzgK"
 }
 ```
 
