@@ -76,20 +76,32 @@ func H_FrameAdd(c *gin.Context) {
 
 func H_SubscriptionsGet(c *gin.Context) {
 	frameId := c.Param("frameId")[1:]
-	var prefix string
+	var prefix []byte
 	if frameId == "" {
-		prefix = "s:id:"
+		prefix = []byte("s:id:")
 	} else {
-		prefix = "s:id:" + frameId + ":"
+		prefix = []byte("s:id:" + frameId + ":")
 	}
 
-	limitStr := c.DefaultQuery("limit", "1000")
+	var start []byte
+	var err error
+	if s := c.DefaultQuery("start", ""); s != "" {
+		start, err = base64.StdEncoding.DecodeString(s)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to decode start value"})
+			return
+		}
+	} else {
+		start = prefix
+	}
+
+	limitStr := c.DefaultQuery("limit", "100")
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		return
 	}
-	data, _, err := db.GetPrefixP([]byte(prefix), []byte(prefix), limit)
+	data, next, err := db.GetPrefixP(prefix, start, limit)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
@@ -106,7 +118,10 @@ func H_SubscriptionsGet(c *gin.Context) {
 		}
 		list[i] = j
 	}
-	c.JSON(http.StatusOK, list)
+	c.JSON(http.StatusOK, gin.H{
+		"result": list,
+		"next":   next,
+	})
 }
 
 func H_LogsGet(c *gin.Context) {

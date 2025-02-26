@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -19,6 +20,12 @@ type Request struct {
 	Signature string
 	Body      []byte
 	Query     string
+}
+
+type ApiResult struct {
+	Error  string            `json:"error"`
+	Result []json.RawMessage `json:"result"`
+	Next   string            `json:"next"`
 }
 
 func (r *Request) Sign(key []byte) *Request {
