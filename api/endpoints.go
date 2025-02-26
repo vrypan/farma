@@ -15,7 +15,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func H_FramesGet(c *gin.Context) {
+func H_FramesGet_old(c *gin.Context) {
 	idStr := c.Param("id")[1:]
 	if idStr == "" {
 		frames := models.AllFrames()
@@ -118,6 +118,64 @@ func H_SubscriptionsGet(c *gin.Context) {
 		}
 		list[i] = j
 	}
+	c.JSON(http.StatusOK, gin.H{
+		"result": list,
+		"next":   next,
+	})
+}
+func H_FramesGet(c *gin.Context) {
+	frameId := c.Param("id")[1:]
+	var prefix []byte
+	if frameId == "" {
+		prefix = []byte("f:id:")
+	} else {
+		prefix = []byte("f:id:" + frameId + ":")
+	}
+
+	var start []byte
+	var err error
+	if s := c.DefaultQuery("start", ""); s != "" {
+		start, err = base64.StdEncoding.DecodeString(s)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to decode start value"})
+			return
+		}
+	} else {
+		start = prefix
+	}
+
+	limitStr := c.DefaultQuery("limit", "100")
+	limit, err := strconv.Atoi(limitStr)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+
+	data, next, err := db.GetPrefixP(prefix, start, limit)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+
+	list := make([]json.RawMessage, len(data))
+
+	for i, item := range data {
+		var pb models.Frame
+		err := proto.Unmarshal(item, &pb)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+		j, err := protojson.Marshal(&pb)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+		list[i] = j
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"result": list,
 		"next":   next,
