@@ -18,8 +18,8 @@ X-SIGNATURE = ED25519_SIGN(
 )
 ```
 
-Sample code in Javascript can be found in [examples/nodejs/index.js](examples/nodejs/index.js)
-Check [api/utils.go](api/utils.go) for an implementation in Go.
+Sample code in Javascript can be found in [examples/nodejs/index.js](../examples/nodejs/index.js)
+Check [api/utils.go](../api/utils.go) for an implementation in Go.
 
 ## Endpoints
 
