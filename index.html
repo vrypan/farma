@@ -1,37 +1,44 @@
 <html>
     <head>
-	<style>
-		body {
-    font-family: 'Inter', sans-serif; /* You can replace with another font like 'Roboto' or 'Lato' */
-    margin: 0;
-    font-size: 20pt;
-    padding: 40px;
-    background-color: #f8f8f8; /* Light background for a clean look */
-    color: #333; /* Dark gray text for readability */
-}
+        <style>
+            body {
+                font-family: "Inter", sans-serif; /* You can replace with another font like 'Roboto' or 'Lato' */
+                margin: 0;
+                font-size: 20pt;
+                padding: 0;
+                background-color: #f8f8f8; /* Light background for a clean look */
+                color: #333; /* Dark gray text for readability */
+            }
 
-h1, h2, h3 {
-    font-weight: 600;
-    margin-bottom: 10px;
-}
+            h1,
+            h2,
+            h3 {
+                font-weight: 600;
+                margin-bottom: 10px;
+            }
 
-p {
-    line-height: 1.6;
-    max-width: 800px;
-}
+            p {
+                padding: 10px 40px 10px 40px;
+                line-height: 1.6;
+                max-width: 800px;
+            }
 
-.container {
-    max-width: 900px;
-    margin: auto;
-}
-img {
-    max-width: 80%;
-    height: auto;
-    display: block;
-    margin: 20px auto; 
-}
-</style>
-        <meta property="og:description" content="Farcaster notification server" />
+            .container {
+                max-width: 900px;
+                margin: auto;
+            }
+            img, button {
+                max-width: 100%;
+                height: auto;
+                display: block;
+                margin: 0 auto;
+                padding: 0;
+            }
+        </style>
+        <meta
+            property="og:description"
+            content="Farcaster notification server"
+        />
         <meta property="og:title" content="farma" />
         <meta property="og:image" content="https://farma.vrypan.net/og.png" />
         <meta
@@ -53,15 +60,66 @@ img {
         />
     </head>
 
-    <body>
+    <p>
         <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk/dist/index.min.js"></script>
         <script>
-            frame.sdk.actions.ready();
-            frame.sdk.actions.addFrame();
+            try {
+                frame.sdk.actions.ready();
+            } catch (error) {
+                console.error("Error in ready():", error);
+            }
+
+            window.onload = async function () {
+                try {
+                    await frame.sdk.actions.addFrame();
+                } catch (error) {
+                    console.log("Initial addFrame rejected:", error);
+                }
+
+                const button = document.getElementById("addFrame");
+                if (button) {
+                    button.addEventListener("click", async () => {
+                        try {
+                            const result = await frame.sdk.actions.addFrame();
+                            if (!result.added) {
+                                console.log(result);
+                                return;
+                            }
+                        } catch (error) {
+                            console.log(
+                                "Button click addFrame rejected:",
+                                error,
+                            );
+                        }
+                    });
+                }
+            };
         </script>
-        <p>This is a test frame. I will use it to test <a href="javascript:open('https://github.com/vrypan/farma/', 'new');">github.com/vrypan/farma/</a>,
-	the Farcaster notification server.</p>
-	    <p>Add the frame to help me with testing. Feel free to add/remove the frame, and enable/disable notifications, it will actually help me.🙏</p>
-	<img src="farma-git-social.png">
+
+        <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk/dist/index.min.js"></script>
+        <p>
+            This is a test frame. I use it to test
+            <a
+                href="javascript:open('https://github.com/vrypan/farma/', 'new');"
+                >github.com/vrypan/farma/</a
+            >, the Farcaster notification server.
+        </p>
+        <p>
+            Feel free to add/remove the
+            frame, and enable/disable notifications, it will actually help me.🙏
+        </p>
+        <p><button
+            id="addFrame"
+            style="
+                padding: 0.5rem 1.75rem;
+                background: #079437;
+                color: white;
+                border-radius: 10px;
+                font-size: 20px;
+                border: none;
+                cursor: pointer;
+            "
+        >Add Frame</button></p>
+        <img src="farma-git-social.png" />
     </body>
 </html>
