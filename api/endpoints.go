@@ -239,29 +239,48 @@ func H_LogsGet(c *gin.Context) {
 		"result": list,
 		"next":   next,
 	})
-
 }
 
 func H_DbKeysGet(c *gin.Context) {
-	prefix := c.Param("prefix")[1:]
+	prefix := []byte(c.Param("prefix")[1:])
 
-	limitStr := c.DefaultQuery("limit", "1000")
+	var start []byte
+	var err error
+	if s := c.DefaultQuery("start", ""); s != "" {
+		start, err = base64.StdEncoding.DecodeString(s)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to decode start value"})
+			return
+		}
+	} else {
+		start = prefix
+	}
+
+	limitStr := c.DefaultQuery("limit", "100")
 	limit, err := strconv.Atoi(limitStr)
+
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		return
 	}
-	data, err := db.GetKeys([]byte(prefix), limit)
+
+	data, next, err := db.GetKeysWithPrefix(prefix, start, limit)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
 	}
+
 	list := make([]string, len(data))
 
 	for i, key := range data {
 		list[i] = string(key)
 	}
-	c.JSON(http.StatusOK, list)
+
+	c.JSON(http.StatusOK, gin.H{
+		"result": list,
+		"next":   next,
+	})
 }
 
 func H_Version(c *gin.Context) {
