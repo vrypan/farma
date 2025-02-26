@@ -10,8 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"crypto/hmac"
-	"crypto/sha512"
+	"crypto/ed25519"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
@@ -34,14 +33,11 @@ func init() {
 }
 
 func verifySignature() gin.HandlerFunc {
-	keyHex := config.GetString("key.private")
-	key, err := hex.DecodeString(keyHex[2:])
+	keyHex := config.GetString("key.public")
+	pubKey, err := hex.DecodeString(keyHex[2:])
 	if err != nil {
 		log.Fatalf("Invalid key: %v", err)
 	}
-
-	layout := time.RFC1123
-	mac := hmac.New(sha512.New, key)
 
 	return func(c *gin.Context) {
 		rMethod := c.Request.Method
@@ -49,35 +45,36 @@ func verifySignature() gin.HandlerFunc {
 		rDate := c.GetHeader("Date")
 		rSignature := c.GetHeader("X-Signature")
 
-		mac.Reset()
-		mac.Write([]byte(rMethod + "\n" + rPath + "\n" + rDate))
-
-		signature := mac.Sum(nil)
-		sig := hex.EncodeToString(signature)
-
-		if rSignature != sig {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "Calculated signature does not match X-Signature",
-			})
-			return
-		}
-
-		parsedTime, err := time.Parse(layout, rDate)
+		parsedTime, err := time.Parse(time.RFC1123, rDate)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-				"error": "Error parsing Date header",
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "Error parsing Date",
 			})
 			return
 		}
 		now := time.Now().UTC()
 		diffSeconds := int(math.Abs(float64(now.Sub(parsedTime).Seconds())))
-
 		if diffSeconds > 10 {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error": "Date diff more than 10 seconds",
 			})
 			return
 		}
+		signatureBytes, err := hex.DecodeString(rSignature)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "Error decoding signature",
+			})
+			return
+		}
+		signedData := []byte(rMethod + "\n" + rPath + "\n" + rDate)
+		if isValidSig := ed25519.Verify(pubKey, signedData, signatureBytes); !isValidSig {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "X-Signature is not valid",
+			})
+			return
+		}
+
 		c.Next()
 	}
 }

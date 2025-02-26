@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/hex"
@@ -28,7 +29,38 @@ type ApiResult struct {
 	Next   string            `json:"next"`
 }
 
-func (r *Request) Sign(key []byte) *Request {
+func (r *Request) SignEd25519(privateKey []byte) *Request {
+	r.Date = time.Now().UTC().Format(time.RFC1123)
+	signature := ed25519.Sign(privateKey,
+		[]byte(r.Method+"\n"+r.Path+"\n"+r.Date),
+	)
+	sig := hex.EncodeToString(signature)
+	r.Signature = sig
+	return r
+}
+
+func (r *Request) VerifyEd25519(pubKey []byte) error {
+	parsedTime, err := time.Parse(time.RFC1123, r.Date)
+	if err != nil {
+		return fmt.Errorf("Error parsing Date: %v", err)
+	}
+	now := time.Now().UTC()
+	diffSeconds := int(math.Abs(float64(now.Sub(parsedTime).Seconds())))
+	if diffSeconds > 10 {
+		return fmt.Errorf("Date diff more than 10 seconds")
+	}
+	signatureBytes, err := hex.DecodeString(r.Signature)
+	if err != nil {
+		return fmt.Errorf("Error decoding signature: %v", err)
+	}
+	signedData := []byte(r.Method + "\n" + r.Path + "\n" + r.Date)
+	if isValidSig := ed25519.Verify(pubKey, signedData, signatureBytes); !isValidSig {
+		return fmt.Errorf("X-Signature is not valid")
+	}
+	return nil
+}
+
+func (r *Request) SignHmac(key []byte) *Request {
 	mac := hmac.New(sha512.New, key)
 	mac.Reset()
 
@@ -43,7 +75,7 @@ func (r *Request) Sign(key []byte) *Request {
 	return r
 }
 
-func (r *Request) Verify(key []byte) error {
+func (r *Request) VerifyHmac(key []byte) error {
 	mac := hmac.New(sha512.New, key)
 	mac.Reset()
 

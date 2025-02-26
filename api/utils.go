@@ -43,7 +43,7 @@ func ApiCall(method string, endpoint string, methodPath string, id string, body 
 		Body:   body,
 		Query:  rawQuery,
 	}
-	request.Sign(keyPrivateBytes)
+	request.SignEd25519(keyPrivateBytes)
 
 	res, err := request.Send(fmt.Sprintf("%s://%s", hostUrl.Scheme, hostUrl.Host))
 	if err != nil {
