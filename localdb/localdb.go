@@ -177,51 +177,70 @@ func GetKeys(prefix []byte, limit int) ([][]byte, error) {
 }
 
 // Each item in items[] is the value of the keys that match the prefix.
-// lastKey is the last key that was returned, which can be used as the next cursor.
-func GetPrefixP(prefix []byte, startKey []byte, limit int) (items [][]byte, lastKey []byte, err error) {
+// nextKey is the nextKey which can be used as the next cursor (or nil if no more keys)
+func GetPrefixP(prefix []byte, startKey []byte, limit int) (items [][]byte, nextKey []byte, err error) {
 	err = db.View(func(txn *badger.Txn) error {
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		opts := badger.IteratorOptions{
+			PrefetchSize: limit + 1,
+		}
+		it := txn.NewIterator(opts)
 		defer it.Close()
-
-		count := 0
-		var v []byte
-		for it.Seek(startKey); it.ValidForPrefix(prefix) && count < limit; it.Next() {
+		for it.Seek(startKey); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
-			k := item.Key()
-			v, err = item.ValueCopy(nil)
-			if err != nil {
-				return err
+			v, e := item.ValueCopy(nil)
+			if e != nil {
+				return e
 			}
-
+			if len(items) > limit {
+				nextKey = item.KeyCopy(nil)
+				break
+			}
 			items = append(items, v)
-			lastKey = k
-			count++
 		}
 		return nil
 	})
 
-	// Return keys and the last key as the next cursor
-	return items, lastKey, err
+	return items, nextKey, err
 }
 
 // Return the keys that match the prefix.
 // lastKey is the next key that is not returned, which can be used
 // in a subsequent call to GetKeysWithPrefix.
 func GetKeysWithPrefix(prefix []byte, startKey []byte, limit int) (items [][]byte, nextKey []byte, err error) {
+	/*
+		To be removed when I feel comfortable with it.
+
+		err = db.View(func(txn *badger.Txn) error {
+		   		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		   		defer it.Close()
+		   		count := 0
+		   		for it.Seek(startKey); it.ValidForPrefix(prefix) && count <= limit; it.Next() {
+		   			item := it.Item()
+		   			k := item.Key()
+		   			nextKey = k
+		   			if count == limit {
+		   				break
+		   			}
+		   			items = append(items, k)
+		   			nextKey = nil
+		   			count++
+		   		}
+		   		return nil
+		   	})
+	*/
 	err = db.View(func(txn *badger.Txn) error {
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		opts := badger.IteratorOptions{
+			PrefetchSize: limit + 1,
+		}
+		it := txn.NewIterator(opts)
 		defer it.Close()
-		count := 0
-		for it.Seek(startKey); it.ValidForPrefix(prefix) && count <= limit; it.Next() {
+		for it.Seek(startKey); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
-			k := item.Key()
-			nextKey = k
-			if count == limit {
+			if len(items) > limit {
+				nextKey = item.KeyCopy(nil)
 				break
 			}
-			items = append(items, k)
-			nextKey = nil
-			count++
+			items = append(items, item.KeyCopy(nil))
 		}
 		return nil
 	})

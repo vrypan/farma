@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/vrypan/farma/api"
 	"github.com/vrypan/farma/models"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var cliFramesListCmd = &cobra.Command{
@@ -29,25 +30,30 @@ func cliFramesList(cmd *cobra.Command, args []string) {
 	body := []byte("")
 	method := "GET"
 
-	res, err := api.ApiCall(method, endpoint, apiEndpointPath, id, body)
-	if err != nil {
-		fmt.Printf("Failed to make API call: %v", err)
-		return
-	}
-
-	var list []json.RawMessage
-
-	if err := json.Unmarshal(res, &list); err != nil {
-		fmt.Printf("Failed to parse response: %v", err)
-		return
-	}
-	for _, v := range list {
-		item := &models.Frame{}
-		if err := json.Unmarshal(v, item); err != nil {
-			fmt.Printf("Failed to parse frame: %v", err)
-			continue
+	next := ""
+	for {
+		resBytes, err := api.ApiCall(method, endpoint, apiEndpointPath, id, body, "start="+next)
+		if err != nil {
+			fmt.Printf("Failed to make API call: %v", err)
+			return
 		}
-		fmt.Printf("%04d %-32s %45s %s\n", item.Id, item.Name, item.Webhook, item.Domain)
-	}
 
+		var res api.ApiResult
+		if err := json.Unmarshal(resBytes, &res); err != nil {
+			fmt.Printf("Failed to parse response: %v", err)
+			return
+		}
+		for _, v := range res.Result {
+			item := models.Frame{}
+			if err := protojson.Unmarshal(v, &item); err != nil {
+				fmt.Printf("Failed to parse user log: %v\n", err)
+				continue
+			}
+			fmt.Printf("%04d %-32s %45s %s\n", item.Id, item.Name, item.Webhook, item.Domain)
+		}
+		if res.Next == "" {
+			break
+		}
+		next = res.Next
+	}
 }

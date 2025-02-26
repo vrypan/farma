@@ -4,64 +4,22 @@
 
 All calls bellow that indicate Authentication, must provide a `X-Signature` HTTP header.
 
-The signature is calculated as
+The public key used to sign the request is expected in the `X-Public-Key` HTTP header. This key
+must be already configured in Farma. Right now, the API does not check `X-Public-Key`, and
+relies in the single key configured during `farma setup`. In the future, when more than one
+keys are supported, `X-Public-Key`will be required.
+
+`X-Signature` is calculated as:
 
 ```
-HMAC-SHA512(
+X-SIGNATURE = ED25519_SIGN(
   PRIVATE_KEY,
   HTTP_METHOD + "\n" + PATH + "\n" + DATE
 )
 ```
 
-Sample code in Javascript:
-
-```javascript
-const https = require("http");
-const crypto = require("crypto");
-
-const date = new Date(Date.now()).toUTCString();
-
-const keyHex = "private key in hex format, no 0x padding"
-const keyBytes = Buffer.from(keyHex, "hex");
-
-const options = {
-  hostname: "localhost",
-  port: 1234,
-  path: "/api/v1/logs/20396",
-  method: "GET",
-  headers: {
-    "Content-Type": "application/json",
-    Date: date,
-  },
-};
-const str = options.method + "\n" + options.path + "\n" + date;
-const hmac = crypto.createHmac("sha512", keyBytes).update(str).digest("hex");
-
-options.headers["X-Signature"] = hmac;
-
-const req = https.request(options, (res) => {
-  // console.log("Status Code:", res.statusCode);
-  //console.log("Headers:", res.headers);
-
-  let data = "";
-  res.on("data", (chunk) => {
-    data += chunk;
-  });
-
-  res.on("end", () => {
-    console.log(data);
-  });
-});
-
-req.on("error", (err) => {
-  console.error("Error:", err);
-});
-
-req.end();
-```
-
-This is not ideal, but it's good enough for now, and it's easy for clients to implement.
-Check `api/utils.go` for an implementation in Go.
+Sample code in Javascript can be found in [examples/nodejs/index.js](../examples/nodejs/index.js)
+Check [api/utils.go](../api/utils.go) for an implementation in Go.
 
 ## Endpoints
 
@@ -73,6 +31,8 @@ Check `api/utils.go` for an implementation in Go.
 |endpoint| /api/v1/frames/:id|
 |method | GET|
 |authentication| required |
+|GET Parameter| `start`: Used when itterating through paginated results |
+|GET Parameter| `limit`: max number of results to fetch |
 
 Returns a JSON object with information about the configured frames. If `id`
 is ommited, it will return all frames.
@@ -80,20 +40,23 @@ is ommited, it will return all frames.
 Sample response:
 
 ```json
-[
-  {
-    "id": 1,
-    "name": "example",
-    "domain": "example.com",
-    "webhook": "/f/16c89d6c-4356-4481-accc-18b3a0b49a2b"
-  },
-  {
-    "id": 2,
-    "name": "example2",
-    "domain": "example2.com",
-    "webhook": "/f/8dd2b175-83ba-48ba-9dd0-41453b4f86ef"
-  }
-]
+{
+  "result":[
+    {
+      "id": 1,
+      "name": "example",
+      "domain": "example.com",
+      "webhook": "/f/16c89d6c-4356-4481-accc-18b3a0b49a2b"
+    },
+    {
+      "id": 2,
+      "name": "example2",
+      "domain": "example2.com",
+      "webhook": "/f/8dd2b175-83ba-48ba-9dd0-41453b4f86ef"
+    }
+  ],
+  "next": "bDp1c2VyOjI4MDoyOjE3NDAyNTU5NzgK"
+}
 ```
 #### Create Frame
 |Item|Description |
@@ -124,6 +87,8 @@ Sample response:
 |endpoint| /api/v1/subscriptions/:frameid|
 |method | GET|
 |authentication| required |
+|GET Parameter| `start`: Used when itterating through paginated results |
+|GET Parameter| `limit`: max number of results to fetch |
 
 This endpoint will return a list of subscriptions. If `frameId` is provided
 it will return only subscriptions for that frame.
@@ -131,27 +96,30 @@ it will return only subscriptions for that frame.
 Sample response:
 
 ```json
-[
-  {
-    "frameId": 1,
-    "userId": 20396,
-    "appId": 9152,
-    "status": 2,
-    "url": "https://api.warpcast.com/v1/frame-notifications",
-    "token": "01952cfc-cc2f-8b3c-4ed8-a476d9b05050",
-    "ctime": {
-      "seconds": 1739953526,
-      "nanos": 954099000
+{
+  "result":[
+    {
+      "frameId": 1,
+      "userId": 20396,
+      "appId": 9152,
+      "status": 2,
+      "url": "https://api.warpcast.com/v1/frame-notifications",
+      "token": "01952cfc-cc2f-8b3c-4ed8-a476d9b05050",
+      "ctime": {
+        "seconds": 1739953526,
+        "nanos": 954099000
+      },
+      "mtime": {
+        "seconds": 1740216525,
+        "nanos": 388740000
+      },
+      "verified": true,
+      "appKey": "aaNtJNyy5/aE0aWssFSjq1EuP6ZU9bHcE53LLxmAEM0="
     },
-    "mtime": {
-      "seconds": 1740216525,
-      "nanos": 388740000
-    },
-    "verified": true,
-    "appKey": "aaNtJNyy5/aE0aWssFSjq1EuP6ZU9bHcE53LLxmAEM0="
-  },
- ...
-]
+  ...
+  ],
+  "next": "bDp1c2VyOjI4MDoyOjE3NDAyNTU5NzgK"
+}
 ```
 
 ### User Logs
@@ -162,6 +130,8 @@ Sample response:
 |endpoint| /api/v1/logs/:userId|
 |method | GET|
 |authentication| required |
+|GET Parameter| `start`: Used when itterating through paginated results |
+|GET Parameter| `limit`: max number of results to fetch |
 
 This endpoint will return history logs. If `userId` (fid) is provided
 it will return only logs for that user. Events include frame add/remove,
@@ -181,29 +151,32 @@ notifications enabled/disabled, and notifications sent.
 Sample response:
 
 ```json
-[
-  {
-    "frameId": 1,
-    "userId": 280,
-    "appId": 9152,
-    "evtType": 2,
-    "ctime": {
-      "seconds": 1739953487,
-      "nanos": 955840000
-    }
-  },
-  {
-    "frameId": 1,
-    "userId": 280,
-    "appId": 9152,
-    "evtType": 1,
-    "ctime": {
-      "seconds": 1739953499,
-      "nanos": 487717000
-    }
-  },
- ...
-]
+{
+  "result": [
+    {
+      "frameId": 1,
+      "userId": 280,
+      "appId": 9152,
+      "evtType": 2,
+      "ctime": {
+        "seconds": 1739953487,
+        "nanos": 955840000
+      }
+    },
+    {
+      "frameId": 1,
+      "userId": 280,
+      "appId": 9152,
+      "evtType": 1,
+      "ctime": {
+        "seconds": 1739953499,
+        "nanos": 487717000
+      }
+    },
+  ...
+  ],
+  "next": "bDp1c2VyOjI4MDoyOjE3NDAyNTU5NzgK"
+}
 ```
 
 ### Notifications

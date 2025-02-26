@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -13,28 +14,6 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
-
-func H_FramesGet(c *gin.Context) {
-	idStr := c.Param("id")[1:]
-	if idStr == "" {
-		frames := models.AllFrames()
-		c.JSON(http.StatusOK, frames)
-		return
-	}
-	id, err := strconv.ParseUint(idStr, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "INVALID_ID: " + idStr})
-		return
-	}
-
-	frame := models.NewFrame().FromId(id)
-	frames := append([]*models.Frame{}, frame)
-	if frame == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "FRAME_NOT_FOUND"})
-		return
-	}
-	c.JSON(http.StatusOK, frames)
-}
 
 func H_FrameAdd(c *gin.Context) {
 	var requestBody struct {
@@ -75,20 +54,32 @@ func H_FrameAdd(c *gin.Context) {
 
 func H_SubscriptionsGet(c *gin.Context) {
 	frameId := c.Param("frameId")[1:]
-	var prefix string
+	var prefix []byte
 	if frameId == "" {
-		prefix = "s:id:"
+		prefix = []byte("s:id:")
 	} else {
-		prefix = "s:id:" + frameId + ":"
+		prefix = []byte("s:id:" + frameId + ":")
 	}
 
-	limitStr := c.DefaultQuery("limit", "1000")
+	var start []byte
+	var err error
+	if s := c.DefaultQuery("start", ""); s != "" {
+		start, err = base64.StdEncoding.DecodeString(s)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to decode start value"})
+			return
+		}
+	} else {
+		start = prefix
+	}
+
+	limitStr := c.DefaultQuery("limit", "100")
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		return
 	}
-	data, _, err := db.GetPrefixP([]byte(prefix), []byte(prefix), limit)
+	data, next, err := db.GetPrefixP(prefix, start, limit)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
@@ -105,34 +96,56 @@ func H_SubscriptionsGet(c *gin.Context) {
 		}
 		list[i] = j
 	}
-	c.JSON(http.StatusOK, list)
+	c.JSON(http.StatusOK, gin.H{
+		"result": list,
+		"next":   next,
+	})
 }
-
-func H_LogsGet(c *gin.Context) {
-	userId := c.Param("userId")[1:]
-	var prefix string
-	if userId == "" {
-		prefix = "l:user:"
+func H_FramesGet(c *gin.Context) {
+	frameId := c.Param("id")[1:]
+	var prefix []byte
+	if frameId == "" {
+		prefix = []byte("f:id:")
 	} else {
-		prefix = "l:user:" + userId + ":"
+		prefix = []byte("f:id:" + frameId + ":")
 	}
 
-	limitStr := c.DefaultQuery("limit", "1000")
+	var start []byte
+	var err error
+	if s := c.DefaultQuery("start", ""); s != "" {
+		start, err = base64.StdEncoding.DecodeString(s)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to decode start value"})
+			return
+		}
+	} else {
+		start = prefix
+	}
+
+	limitStr := c.DefaultQuery("limit", "100")
 	limit, err := strconv.Atoi(limitStr)
+
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		return
 	}
-	data, _, err := db.GetPrefixP([]byte(prefix), []byte(prefix), limit)
+
+	data, next, err := db.GetPrefixP(prefix, start, limit)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
 	}
 
 	list := make([]json.RawMessage, len(data))
+
 	for i, item := range data {
-		var pb models.UserLog
-		proto.Unmarshal(item, &pb)
+		var pb models.Frame
+		err := proto.Unmarshal(item, &pb)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
 		j, err := protojson.Marshal(&pb)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
@@ -140,33 +153,118 @@ func H_LogsGet(c *gin.Context) {
 		}
 		list[i] = j
 	}
-	c.JSON(http.StatusOK, list)
+
+	c.JSON(http.StatusOK, gin.H{
+		"result": list,
+		"next":   next,
+	})
 }
 
-func H_DbKeysGet(c *gin.Context) {
-	prefix := c.Param("prefix")[1:]
+func H_LogsGet(c *gin.Context) {
+	userId := c.Param("userId")[1:]
+	var prefix []byte
+	if userId == "" {
+		prefix = []byte("l:user:")
+	} else {
+		prefix = []byte("l:user:" + userId + ":")
+	}
 
-	limitStr := c.DefaultQuery("limit", "1000")
+	var start []byte
+	var err error
+	if s := c.DefaultQuery("start", ""); s != "" {
+		start, err = base64.StdEncoding.DecodeString(s)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to decode start value"})
+			return
+		}
+	} else {
+		start = prefix
+	}
+
+	limitStr := c.DefaultQuery("limit", "100")
 	limit, err := strconv.Atoi(limitStr)
+
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		return
 	}
-	data, err := db.GetKeys([]byte(prefix), limit)
+
+	data, next, err := db.GetPrefixP(prefix, start, limit)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
 	}
+
+	list := make([]json.RawMessage, len(data))
+
+	for i, item := range data {
+		var pb models.UserLog
+		err := proto.Unmarshal(item, &pb)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+		j, err := protojson.Marshal(&pb)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+		list[i] = j
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"result": list,
+		"next":   next,
+	})
+}
+
+func H_DbKeysGet(c *gin.Context) {
+	prefix := []byte(c.Param("prefix")[1:])
+
+	var start []byte
+	var err error
+	if s := c.DefaultQuery("start", ""); s != "" {
+		start, err = base64.StdEncoding.DecodeString(s)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to decode start value"})
+			return
+		}
+	} else {
+		start = prefix
+	}
+
+	limitStr := c.DefaultQuery("limit", "100")
+	limit, err := strconv.Atoi(limitStr)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+
+	data, next, err := db.GetKeysWithPrefix(prefix, start, limit)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+
 	list := make([]string, len(data))
 
 	for i, key := range data {
 		list[i] = string(key)
 	}
-	c.JSON(http.StatusOK, list)
+
+	c.JSON(http.StatusOK, gin.H{
+		"result": list,
+		"next":   next,
+	})
 }
 
 func H_Version(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"version": config.FARMA_VERSION})
+	c.JSON(http.StatusOK, gin.H{
+		"version": config.FARMA_VERSION,
+	})
 }
 
 func H_Notify(c *gin.Context) {

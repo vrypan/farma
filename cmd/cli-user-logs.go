@@ -32,29 +32,40 @@ func cliLogs(cmd *cobra.Command, args []string) {
 	body := []byte("")
 	method := "GET"
 
-	res, err := api.ApiCall(method, endpoint, apiEndpointPath, id, body)
-	if err != nil {
-		fmt.Printf("Failed to make API call: %v", err)
-		return
-	}
+	next := ""
+	for {
+		resBytes, err := api.ApiCall(method, endpoint, apiEndpointPath, id, body, "start="+next)
+		if err != nil {
+			fmt.Printf("Failed to make API call: %v", err)
+			return
+		}
+		type apiResult struct {
+			Error  string            `json:"error"`
+			Result []json.RawMessage `json:"result"`
+			Next   string            `json:"next"`
+		}
+		var res apiResult
+		if err := json.Unmarshal(resBytes, &res); err != nil {
+			fmt.Printf("Failed to parse response: %v\n", err)
+			return
+		}
 
-	var list []json.RawMessage
-	if err := json.Unmarshal(res, &list); err != nil {
-		fmt.Printf("Failed to parse response: %v\n", err)
-		return
-	}
-	for _, v := range list {
-		item := models.UserLog{}
-		if err := protojson.Unmarshal(v, &item); err != nil {
-			fmt.Printf("Failed to parse user log: %v\n", err)
-			continue
+		for _, v := range res.Result {
+			item := models.UserLog{}
+			if err := protojson.Unmarshal(v, &item); err != nil {
+				fmt.Printf("Failed to parse user log: %v\n", err)
+				continue
+			}
+			fmt.Printf("%06d %04d %04d %-45s %s",
+				item.UserId, item.FrameId, item.AppId, item.EvtType.Enum(), item.Ctime.AsTime().Format(time.RFC3339))
+			if item.GetEventContextNotification() != nil {
+				fmt.Printf(" %s", item.GetEventContextNotification().GetId())
+			}
+			fmt.Println()
 		}
-		fmt.Printf("%06d %04d %04d %-45s %s",
-			item.UserId, item.FrameId, item.AppId, item.EvtType.Enum(), item.Ctime.AsTime().Format(time.RFC3339))
-		if item.GetEventContextNotification() != nil {
-			fmt.Printf(" %s", item.GetEventContextNotification().GetId())
-			//fmt.Printf(" notification:%s", item.GetEventContextNotification().GetId())
+		if res.Next == "" {
+			break
 		}
-		fmt.Println()
+		next = res.Next
 	}
 }

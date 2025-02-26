@@ -31,29 +31,33 @@ func cliSubscriptions(cmd *cobra.Command, args []string) {
 	id, _ := cmd.Flags().GetString("id")
 	body := []byte("")
 	method := "GET"
-
-	res, err := api.ApiCall(method, endpoint, apiEndpointPath, id, body)
-	if err != nil {
-		fmt.Printf("Failed to make API call: %v", err)
-		return
-	}
-
-	//var list []*models.Subscription
-	var list []json.RawMessage
-
-	if err := json.Unmarshal(res, &list); err != nil {
-		fmt.Printf("Failed to parse response: %v", err)
-		return
-	}
-	for _, v := range list {
-		item := models.Subscription{}
-		if err := protojson.Unmarshal(v, &item); err != nil {
-			fmt.Printf("Failed to parse user log: %v\n", err)
-			continue
+	next := ""
+	for {
+		resBytes, err := api.ApiCall(method, endpoint, apiEndpointPath, id, body, "start="+next)
+		if err != nil {
+			fmt.Printf("Failed to make API call: %v", err)
+			return
 		}
-		fmt.Printf("%06d %04d %06d %-20s %s %s %s %s\n",
-			item.UserId, item.FrameId, item.AppId, item.Status.String(),
-			item.Ctime.AsTime().Format(time.RFC3339), item.Mtime.AsTime().Format(time.RFC3339), item.Token, item.Url,
-		)
+
+		var res api.ApiResult
+		if err := json.Unmarshal(resBytes, &res); err != nil {
+			fmt.Printf("Failed to parse response: %v", err)
+			return
+		}
+		for _, v := range res.Result {
+			item := models.Subscription{}
+			if err := protojson.Unmarshal(v, &item); err != nil {
+				fmt.Printf("Failed to parse user log: %v\n", err)
+				continue
+			}
+			fmt.Printf("%06d %04d %06d %-20s %s %s %s %s\n",
+				item.UserId, item.FrameId, item.AppId, item.Status.String(),
+				item.Ctime.AsTime().Format(time.RFC3339), item.Mtime.AsTime().Format(time.RFC3339), item.Token, item.Url,
+			)
+		}
+		if res.Next == "" {
+			break
+		}
+		next = res.Next
 	}
 }
