@@ -12,9 +12,11 @@ import (
 )
 
 var cliSubscriptionsCmd = &cobra.Command{
-	Use:   "subscriptions",
-	Short: "List all logs",
-	Long: `List all user logs: UserId (Fid), FrameId, AppId (Fid), Event, Timestamp
+	Use:   "subscriptions-list",
+	Short: "List subscriptions",
+	Long: `List frame subscriptions.
+Fields: UserId (Fid), FrameId, AppId (Fid), Status, Ctime, Mtime, Token, Endpoint
+If frameId is provided, show only this frame.
 This is a wrapper command that uses the farma API.`,
 	Run: cliSubscriptions,
 }
@@ -22,13 +24,19 @@ This is a wrapper command that uses the farma API.`,
 func init() {
 	rootCmd.AddCommand(cliSubscriptionsCmd)
 	cliSubscriptionsCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v1/frames/ (from config file)")
-	cliSubscriptionsCmd.Flags().String("id", "", "User Id (fid) or none to list all subscriptions")
+	cliSubscriptionsCmd.Flags().Int("frameid", 0, "Frame Id or none to list all subscriptions")
 }
 
 func cliSubscriptions(cmd *cobra.Command, args []string) {
 	apiEndpointPath := "subscriptions/"
 	endpoint, _ := cmd.Flags().GetString("path")
-	id, _ := cmd.Flags().GetString("id")
+	frameId, _ := cmd.Flags().GetInt("id")
+	var id string
+	if frameId == 0 {
+		id = ""
+	} else {
+		id = fmt.Sprintf("%d", id)
+	}
 	body := []byte("")
 	method := "GET"
 	next := ""
