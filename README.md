@@ -1,3 +1,5 @@
+# [Add this frame](https://warpcast.com/~/frames/launch?domain=farma.vrypan.net) to receive notifications about farma updates and versions.
+
 ![farma-git-social](farma-git-social.png)
 
 # farma
