@@ -30,12 +30,12 @@ func init() {
 func cliSubscriptions(cmd *cobra.Command, args []string) {
 	apiEndpointPath := "subscriptions/"
 	endpoint, _ := cmd.Flags().GetString("path")
-	frameId, _ := cmd.Flags().GetInt("id")
+	frameId, _ := cmd.Flags().GetInt("frameid")
 	var id string
 	if frameId == 0 {
 		id = ""
 	} else {
-		id = fmt.Sprintf("%d", id)
+		id = fmt.Sprintf("%d", frameId)
 	}
 	body := []byte("")
 	method := "GET"
