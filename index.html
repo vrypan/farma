@@ -83,8 +83,7 @@
     <p>
         <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk/dist/index.min.js"></script>
         <script>
-        const domain = window.location.hostname;
-        console.log("domain",domain);
+        const wplink = "https://warpcast.com/?launchFrameUrl=" + window.location
         let header = document.createElement('header');
         header.innerHTML = `<div id="fcframebar">
           <svg width="36" height="36" viewBox="0 0 1000 1000" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;">
@@ -94,7 +93,7 @@
           <path d="M675.556 746.667C663.283 746.667 653.333 756.616 653.333 768.889V795.556H648.889C636.616 795.556 626.667 805.505 626.667 817.778V844.444H875.556V817.778C875.556 805.505 865.606 795.556 853.333 795.556H848.889V768.889C848.889 756.616 838.94 746.667 826.667 746.667V351.111H851.111L880 253.333H702.222V746.667H675.556Z" fill="white"/>
           </svg>
           <span style="vertical-align: middle;">This page supports Farcaster Frames.</span>
-          <button onclick="window.location.href='https://warpcast.com/~/frames/launch?domain=`+domain+`';">Open in Warpcast</button>
+          <button onclick="window.location.href='https://warpcast.com/~/frames/launch?domain=`+wplink+`';">Open in Warpcast</button>
           </div>`;
 
 
