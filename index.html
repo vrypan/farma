@@ -102,7 +102,7 @@
     <p>
         <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk/dist/index.min.js"></script>
         <script>
-        const wplink = "https://warpcast.com/?launchFrameUrl=" + window.location
+        const wplink = "https://warpcast.com/?launchFrameUrl=" + encodeURIComponent(window.location);
         let header = document.createElement('header');
         header.innerHTML = `<div id="fcframebar"><div class="container">
           <div class="info">
@@ -114,7 +114,7 @@
           </svg>
           <div style="vertical-align: top; text-align:left; padding-left:36px;"
           ><b>Farcaster Frame</b><br>Best experienced in Farcaster</div></div>
-        <button onclick="window.location.href='`+ encodeURIComponent(wplink)+`';">Open</button>
+        <button onclick="window.location.href='`+ wplink+`';">Open</button>
           </div></div>`;
 
 
