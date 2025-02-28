@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	db "github.com/vrypan/farma/localdb"
 	"google.golang.org/protobuf/proto"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func NewNotification(
@@ -187,6 +188,7 @@ func (n *Notification) PrefixBytes() []byte {
 }
 
 func (n *Notification) Save() (int, error) {
+	n.Ctime = timestamppb.Now()
 	nextVersion := uint64(0)
 	var err error
 	prefix := []byte("n:id:" + n.Id + ":")
