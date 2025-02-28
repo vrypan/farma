@@ -25,9 +25,11 @@ func init() {
 	rootCmd.AddCommand(cliSubscriptionsCmd)
 	cliSubscriptionsCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v1/frames/ (from config file)")
 	cliSubscriptionsCmd.Flags().Int("frameid", 0, "Frame Id or none to list all subscriptions")
+	cliSubscriptionsCmd.Flags().BoolP("json", "j", false, "Output in JSON format")
 }
 
 func cliSubscriptions(cmd *cobra.Command, args []string) {
+	jsonFlag, _ := cmd.Flags().GetBool("json")
 	apiEndpointPath := "subscriptions/"
 	endpoint, _ := cmd.Flags().GetString("path")
 	frameId, _ := cmd.Flags().GetInt("frameid")
@@ -58,10 +60,14 @@ func cliSubscriptions(cmd *cobra.Command, args []string) {
 				fmt.Printf("Failed to parse user log: %v\n", err)
 				continue
 			}
-			fmt.Printf("%06d %04d %06d %-20s %s %s %s %s\n",
-				item.UserId, item.FrameId, item.AppId, item.Status.String(),
-				item.Ctime.AsTime().Format(time.RFC3339), item.Mtime.AsTime().Format(time.RFC3339), item.Token, item.Url,
-			)
+			if jsonFlag {
+				fmt.Println(string(v))
+			} else {
+				fmt.Printf("%06d %04d %06d %-20s %s %s %s %s\n",
+					item.UserId, item.FrameId, item.AppId, item.Status.String(),
+					item.Ctime.AsTime().Format(time.RFC3339), item.Mtime.AsTime().Format(time.RFC3339), item.Token, item.Url,
+				)
+			}
 		}
 		if res.Next == "" {
 			break

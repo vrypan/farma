@@ -14,7 +14,7 @@ import (
 var cliLogsCmd = &cobra.Command{
 	Use:   "user-logs",
 	Short: "List all logs",
-	Long: `List all user logs: UserId (Fid), FrameId, AppId (Fid), Event, Timestamp
+	Long: `List user logs: UserId (Fid), FrameId, AppId (Fid), Event, Timestamp
 This is a wrapper command that uses the farma API.`,
 	Run: cliLogs,
 }
@@ -23,9 +23,11 @@ func init() {
 	rootCmd.AddCommand(cliLogsCmd)
 	cliLogsCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v1/frames/ (from config file)")
 	cliLogsCmd.Flags().String("id", "", "User Id (fid) or none to list all logs")
+	cliLogsCmd.Flags().BoolP("json", "j", false, "Output logs in JSON format")
 }
 
 func cliLogs(cmd *cobra.Command, args []string) {
+	jsonFlag, _ := cmd.Flags().GetBool("json")
 	apiEndpointPath := "logs/"
 	endpoint, _ := cmd.Flags().GetString("path")
 	id, _ := cmd.Flags().GetString("id")
@@ -56,12 +58,16 @@ func cliLogs(cmd *cobra.Command, args []string) {
 				fmt.Printf("Failed to parse user log: %v\n", err)
 				continue
 			}
-			fmt.Printf("%06d %04d %04d %-45s %s",
-				item.UserId, item.FrameId, item.AppId, item.EvtType.Enum(), item.Ctime.AsTime().Format(time.RFC3339))
-			if item.GetEventContextNotification() != nil {
-				fmt.Printf(" %s", item.GetEventContextNotification().GetId())
+			if jsonFlag {
+				fmt.Println(string(v))
+			} else {
+				fmt.Printf("%06d %04d %04d %-45s %s",
+					item.UserId, item.FrameId, item.AppId, item.EvtType.Enum(), item.Ctime.AsTime().Format(time.RFC3339))
+				if item.GetEventContextNotification() != nil {
+					fmt.Printf(" %s", item.GetEventContextNotification().GetId())
+				}
+				fmt.Println()
 			}
-			fmt.Println()
 		}
 		if res.Next == "" {
 			break

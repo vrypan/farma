@@ -22,8 +22,10 @@ func init() {
 	rootCmd.AddCommand(cliFramesListCmd)
 	cliFramesListCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v1/frames/ (from config file)")
 	cliFramesListCmd.Flags().String("id", "", "Frame Id or none to list all frames")
+	cliFramesListCmd.Flags().BoolP("json", "j", false, "Output in JSON format")
 }
 func cliFramesList(cmd *cobra.Command, args []string) {
+	jsonFlag, _ := cmd.Flags().GetBool("json")
 	apiEndpointPath := "frames/"
 	endpoint, _ := cmd.Flags().GetString("path")
 	id, _ := cmd.Flags().GetString("id")
@@ -49,7 +51,11 @@ func cliFramesList(cmd *cobra.Command, args []string) {
 				fmt.Printf("Failed to parse user log: %v\n", err)
 				continue
 			}
-			fmt.Printf("%04d %-32s %45s %s\n", item.Id, item.Name, item.Webhook, item.Domain)
+			if jsonFlag {
+				fmt.Println(string(v))
+			} else {
+				fmt.Printf("%04d %-32s %45s %s\n", item.Id, item.Name, item.Webhook, item.Domain)
+			}
 		}
 		if res.Next == "" {
 			break
