@@ -110,6 +110,7 @@ func ginServer(cmd *cobra.Command, args []string) {
 
 		apiv1.GET("/dbkeys/*prefix", api.H_DbKeysGet)
 
+		apiv1.GET("/notifications/*id", api.H_NotificationsGet)
 		apiv1.POST("/notifications/", api.H_Notify)
 	}
 	router.GET("/api/v1/version", api.H_Version)

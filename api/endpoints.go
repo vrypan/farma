@@ -354,3 +354,53 @@ func H_Notify(c *gin.Context) {
 		"Count":               notificationCount,
 	})
 }
+
+func H_NotificationsGet(c *gin.Context) {
+	notificationId := c.Param("id")[1:]
+	var prefix []byte
+	if notificationId == "" {
+		prefix = []byte("n:id:")
+	} else {
+		prefix = []byte("n:id:" + notificationId + ":")
+	}
+
+	var start []byte
+	var err error
+	if s := c.DefaultQuery("start", ""); s != "" {
+		start, err = base64.StdEncoding.DecodeString(s)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to decode start value"})
+			return
+		}
+	} else {
+		start = prefix
+	}
+
+	limitStr := c.DefaultQuery("limit", "100")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+	data, next, err := db.GetPrefixP(prefix, start, limit)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+	}
+
+	list := make([]json.RawMessage, len(data))
+	for i, item := range data {
+		var pb models.Notification
+		proto.Unmarshal(item, &pb)
+		j, err := protojson.Marshal(&pb)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+		list[i] = j
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"result": list,
+		"next":   next,
+	})
+}
