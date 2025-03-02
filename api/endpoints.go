@@ -49,6 +49,57 @@ func H_FrameAdd(c *gin.Context) {
 	c.JSON(http.StatusCreated, frame)
 }
 
+func H_FrameUpdate(c *gin.Context) {
+	frameIdStr := c.Param("id")
+	frameId, err := strconv.ParseUint(frameIdStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid frame id (" + frameIdStr + ")",
+		})
+		return
+	}
+
+	var requestBody struct {
+		Name    string `json:"name"`
+		Domain  string `json:"domain"`
+		Webhook string `json:"webhook"`
+	}
+	if err := c.BindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+	frame := models.NewFrame()
+	err = frame.FromName(requestBody.Name)
+	if err == nil && frame.Id != frameId {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"error": "frame exists",
+		})
+		return
+	}
+	if err != db.ERR_NOT_FOUND {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	frame = frame.FromId(frameId)
+	if frame == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "frame not found"})
+		return
+	}
+	frame.Name = requestBody.Name
+	frame.Domain = requestBody.Domain
+	if requestBody.Webhook == "" {
+		frame.Webhook = "/f/" + uuid.New().String()
+	} else {
+		frame.Webhook = requestBody.Webhook
+	}
+
+	if err := frame.Save(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+	c.JSON(http.StatusCreated, frame)
+}
+
 func H_SubscriptionsGet(c *gin.Context) {
 	retrieveData(c, "s:id:", c.Param("id"), &models.Subscription{})
 }

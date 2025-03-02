@@ -10,8 +10,8 @@ message Frame {
   string name = 2;
   string domain = 3;
   string webhook = 4;
+  string publikKey = 5
 }
-
 enum SubscriptionStatus {
   UNKNOWN = 0;
   UNSUBSCRIBED = 1;

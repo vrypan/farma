@@ -103,6 +103,7 @@ func ginServer(cmd *cobra.Command, args []string) {
 	apiv1 := router.Group("/api/v1", verifySignature())
 	{
 		apiv1.GET("/frames/*id", api.H_FramesGet)
+		apiv1.POST("/frames/:id", api.H_FrameUpdate)
 		apiv1.POST("/frames/", api.H_FrameAdd)
 
 		apiv1.GET("/subscriptions/*frameId", api.H_SubscriptionsGet)
