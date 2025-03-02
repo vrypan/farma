@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -11,8 +10,6 @@ import (
 	"github.com/vrypan/farma/config"
 	db "github.com/vrypan/farma/localdb"
 	"github.com/vrypan/farma/models"
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
 )
 
 func H_FrameAdd(c *gin.Context) {
@@ -53,218 +50,15 @@ func H_FrameAdd(c *gin.Context) {
 }
 
 func H_SubscriptionsGet(c *gin.Context) {
-	frameId := c.Param("frameId")[1:]
-	var prefix []byte
-	if frameId == "" {
-		prefix = []byte("s:id:")
-	} else {
-		prefix = []byte("s:id:" + frameId + ":")
-	}
-
-	var start []byte
-	var err error
-	if s := c.DefaultQuery("start", ""); s != "" {
-		start, err = base64.StdEncoding.DecodeString(s)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to decode start value"})
-			return
-		}
-	} else {
-		start = prefix
-	}
-
-	limitStr := c.DefaultQuery("limit", "100")
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
-		return
-	}
-	data, next, err := db.GetPrefixP(prefix, start, limit)
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
-	}
-
-	list := make([]json.RawMessage, len(data))
-	for i, item := range data {
-		var pb models.Subscription
-		proto.Unmarshal(item, &pb)
-		j, err := protojson.Marshal(&pb)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
-			return
-		}
-		list[i] = j
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"result": list,
-		"next":   next,
-	})
+	retrieveData(c, "s:id:", c.Param("id"), &models.Subscription{})
 }
+
 func H_FramesGet(c *gin.Context) {
-	frameId := c.Param("id")[1:]
-	var prefix []byte
-	if frameId == "" {
-		prefix = []byte("f:id:")
-	} else {
-		prefix = []byte("f:id:" + frameId + ":")
-	}
-
-	var start []byte
-	var err error
-	if s := c.DefaultQuery("start", ""); s != "" {
-		start, err = base64.StdEncoding.DecodeString(s)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to decode start value"})
-			return
-		}
-	} else {
-		start = prefix
-	}
-
-	limitStr := c.DefaultQuery("limit", "100")
-	limit, err := strconv.Atoi(limitStr)
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
-		return
-	}
-
-	data, next, err := db.GetPrefixP(prefix, start, limit)
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
-		return
-	}
-
-	list := make([]json.RawMessage, len(data))
-
-	for i, item := range data {
-		var pb models.Frame
-		err := proto.Unmarshal(item, &pb)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
-			return
-		}
-		j, err := protojson.Marshal(&pb)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
-			return
-		}
-		list[i] = j
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"result": list,
-		"next":   next,
-	})
+	retrieveData(c, "f:id:", c.Param("id"), &models.Frame{})
 }
 
 func H_LogsGet(c *gin.Context) {
-	userId := c.Param("userId")[1:]
-	var prefix []byte
-	if userId == "" {
-		prefix = []byte("l:user:")
-	} else {
-		prefix = []byte("l:user:" + userId + ":")
-	}
-
-	var start []byte
-	var err error
-	if s := c.DefaultQuery("start", ""); s != "" {
-		start, err = base64.StdEncoding.DecodeString(s)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to decode start value"})
-			return
-		}
-	} else {
-		start = prefix
-	}
-
-	limitStr := c.DefaultQuery("limit", "100")
-	limit, err := strconv.Atoi(limitStr)
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
-		return
-	}
-
-	data, next, err := db.GetPrefixP(prefix, start, limit)
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
-		return
-	}
-
-	list := make([]json.RawMessage, len(data))
-
-	for i, item := range data {
-		var pb models.UserLog
-		err := proto.Unmarshal(item, &pb)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
-			return
-		}
-		j, err := protojson.Marshal(&pb)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
-			return
-		}
-		list[i] = j
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"result": list,
-		"next":   next,
-	})
-}
-
-func H_DbKeysGet(c *gin.Context) {
-	prefix := []byte(c.Param("prefix")[1:])
-
-	var start []byte
-	var err error
-	if s := c.DefaultQuery("start", ""); s != "" {
-		start, err = base64.StdEncoding.DecodeString(s)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to decode start value"})
-			return
-		}
-	} else {
-		start = prefix
-	}
-
-	limitStr := c.DefaultQuery("limit", "100")
-	limit, err := strconv.Atoi(limitStr)
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
-		return
-	}
-
-	data, next, err := db.GetKeysWithPrefix(prefix, start, limit)
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
-		return
-	}
-
-	list := make([]string, len(data))
-
-	for i, key := range data {
-		list[i] = string(key)
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"result": list,
-		"next":   next,
-	})
-}
-
-func H_Version(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"version": config.FARMA_VERSION,
-	})
+	retrieveData(c, "l:user:", c.Param("userId"), &models.UserLog{})
 }
 
 func H_Notify(c *gin.Context) {
@@ -356,13 +150,11 @@ func H_Notify(c *gin.Context) {
 }
 
 func H_NotificationsGet(c *gin.Context) {
-	notificationId := c.Param("id")[1:]
-	var prefix []byte
-	if notificationId == "" {
-		prefix = []byte("n:id:")
-	} else {
-		prefix = []byte("n:id:" + notificationId + ":")
-	}
+	retrieveData(c, "n:id:", c.Param("id"), &models.Notification{})
+}
+
+func H_DbKeysGet(c *gin.Context) {
+	prefix := []byte(c.Param("prefix")[1:])
 
 	var start []byte
 	var err error
@@ -378,29 +170,33 @@ func H_NotificationsGet(c *gin.Context) {
 
 	limitStr := c.DefaultQuery("limit", "100")
 	limit, err := strconv.Atoi(limitStr)
+
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		return
 	}
-	data, next, err := db.GetPrefixP(prefix, start, limit)
+
+	data, next, err := db.GetKeysWithPrefix(prefix, start, limit)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
 	}
 
-	list := make([]json.RawMessage, len(data))
-	for i, item := range data {
-		var pb models.Notification
-		proto.Unmarshal(item, &pb)
-		j, err := protojson.Marshal(&pb)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
-			return
-		}
-		list[i] = j
+	list := make([]string, len(data))
+
+	for i, key := range data {
+		list[i] = string(key)
 	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"result": list,
 		"next":   next,
+	})
+}
+
+func H_Version(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"version": config.FARMA_VERSION,
 	})
 }
