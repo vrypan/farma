@@ -6,11 +6,11 @@
   },
   "frame": {
     "version": "1",
-    "name": "farma - test frame",
+    "name": "farma",
     "iconUrl": "https://farma.vrypan.net/app.png",
     "homeUrl": "https://farma.vrypan.net",
     "imageUrl": "https://farma.vrypan.net/og.png",
-    "buttonTitle": "Check this out",
+    "buttonTitle": "Learn more",
     "splashImageUrl": "https://farma.vrypan.net/logo.png",
     "splashBackgroundColor": "#012100",
     "webhookUrl": "https://srv1.snowshoe-pirate.ts.net/f/aabf5d07-737d-48ab-b639-79806a9ff94a"
