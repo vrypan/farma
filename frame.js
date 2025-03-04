@@ -33,6 +33,7 @@ function FrameBar() {
 window.onload = async () => {
   try {
     await frame.sdk.actions.ready();
+    await frame.sdk.actions.addFrame();
     const ctx = await frame.sdk.context;
     ctx
       ? document.querySelectorAll("a[href^='http']").forEach((link) =>
@@ -42,6 +43,5 @@ window.onload = async () => {
           }),
         )
       : FrameBar();
-    await frame.sdk.actions.addFrame();
   } catch (error) {}
 };
