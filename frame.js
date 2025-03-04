@@ -42,6 +42,6 @@ window.onload = async () => {
           }),
         )
       : FrameBar();
-    await frame.sdk.actions.addFrame;
+    await frame.sdk.actions.addFrame();
   } catch (error) {}
 };
