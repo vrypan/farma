@@ -30,18 +30,23 @@ function FrameBar() {
   document.body.insertBefore(header, document.body.firstChild);
 }
 
+async function inFrameContext() {
+  const links = document.querySelectorAll("a[href^='http']");
+  for (let link of links) {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      frame.sdk.actions.openUrl(link.getAttribute("href"));
+    });
+  }
+  await frame.sdk.actions.addFrame();
+}
+
 window.onload = async () => {
   try {
     await frame.sdk.actions.ready();
-    await frame.sdk.actions.addFrame();
     const ctx = await frame.sdk.context;
-    ctx
-      ? document.querySelectorAll("a[href^='http']").forEach((link) =>
-          link.addEventListener("click", (event) => {
-            event.preventDefault();
-            frame.sdk.actions.openUrl(link.getAttribute("href"));
-          }),
-        )
-      : FrameBar();
-  } catch (error) {}
+    ctx ? inFrameContext() : FrameBar();
+  } catch (error) {
+    console.error(error);
+  }
 };
