@@ -45,7 +45,7 @@ window.onload = async () => {
   try {
     await frame.sdk.actions.ready();
     const ctx = await frame.sdk.context;
-    ctx ? inFrameContext() : FrameBar();
+    ctx ? await inFrameContext() : FrameBar();
   } catch (error) {
     console.error(error);
   }
