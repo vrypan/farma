@@ -12,7 +12,7 @@ import (
 )
 
 var cliSubscriptionsCmd = &cobra.Command{
-	Use:   "subscriptions-list",
+	Use:   "subscriptions-list [frameId]",
 	Short: "List subscriptions",
 	Long: `List frame subscriptions.
 Fields: UserId (Fid), FrameId, AppId (Fid), Status, Ctime, Mtime, Token, Endpoint
@@ -24,26 +24,31 @@ This is a wrapper command that uses the farma API.`,
 func init() {
 	rootCmd.AddCommand(cliSubscriptionsCmd)
 	cliSubscriptionsCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v1/frames/ (from config file)")
-	cliSubscriptionsCmd.Flags().Int("frameid", 0, "Frame Id or none to list all subscriptions")
 	cliSubscriptionsCmd.Flags().BoolP("json", "j", false, "Output in JSON format")
 }
 
 func cliSubscriptions(cmd *cobra.Command, args []string) {
 	jsonFlag, _ := cmd.Flags().GetBool("json")
-	apiEndpointPath := "subscriptions/"
-	endpoint, _ := cmd.Flags().GetString("path")
-	frameId, _ := cmd.Flags().GetInt("frameid")
 	var id string
-	if frameId == 0 {
-		id = ""
-	} else {
-		id = fmt.Sprintf("%d", frameId)
+	if len(args) > 0 {
+		id = args[0]
 	}
-	body := []byte("")
-	method := "GET"
+
+	a := api.ApiCallData{}
+	a.Path = "subscriptions/" + id
+	if len(args) != 0 {
+		a.Path += args[0]
+	}
+	a.Endpoint, _ = cmd.Flags().GetString("path")
+	a.Body = ""
+	a.Method = "GET"
+
 	next := ""
 	for {
-		resBytes, err := api.ApiCall(method, endpoint, apiEndpointPath, id, body, "start="+next)
+		if next != "" {
+			a.RawQuery = fmt.Sprintf("start=%s", next)
+		}
+		resBytes, err := a.Call()
 		if err != nil {
 			fmt.Printf("Failed to make API call: %v", err)
 			return

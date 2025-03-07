@@ -49,6 +49,7 @@ func exportData(cmd *cobra.Command, args []string) {
 	exportKeys("f_endpoint", []byte("f:endpoint:"), outDir)
 	exportKeys("s_url", []byte("s:url:"), outDir)
 	exportKeys("s_token", []byte("s:token:"), outDir)
+	exportKeys("f_pk", []byte("f:pk:"), outDir)
 	exportSeq("FrameId", []byte("FrameId"), outDir)
 }
 

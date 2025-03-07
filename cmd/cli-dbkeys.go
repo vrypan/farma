@@ -21,18 +21,21 @@ func init() {
 }
 
 func cliDbKeys(cmd *cobra.Command, args []string) {
-	apiEndpointPath := "dbkeys/"
-	prefix := ""
+	a := api.ApiCallData{}
+	a.Path = "dbkeys/"
 	if len(args) != 0 {
-		prefix = args[0]
+		a.Path += args[0]
 	}
-	endpoint, _ := cmd.Flags().GetString("path")
-	body := []byte("")
-	method := "GET"
+	a.Endpoint, _ = cmd.Flags().GetString("path")
+	a.Body = ""
+	a.Method = "GET"
 
 	next := ""
 	for {
-		resBytes, err := api.ApiCall(method, endpoint, apiEndpointPath, prefix, body, "start="+next)
+		if next != "" {
+			a.RawQuery = fmt.Sprintf("start=%s", next)
+		}
+		resBytes, err := a.Call()
 		if err != nil {
 			fmt.Printf("Failed to make API call: %v", err)
 			return

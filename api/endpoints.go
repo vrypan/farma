@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -13,6 +14,13 @@ import (
 )
 
 func H_FrameAdd(c *gin.Context) {
+	if _, exists := c.Get("OnlyFrame"); exists {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+			"error": "You must use the rook key to create new frames",
+		})
+		return
+	}
+
 	var requestBody struct {
 		Name    string `json:"name"`
 		Domain  string `json:"domain"`
@@ -41,12 +49,22 @@ func H_FrameAdd(c *gin.Context) {
 	} else {
 		frame.Webhook = requestBody.Webhook
 	}
+	privKey, err := frame.NewPk()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+	encodedPrivKey := base64.StdEncoding.EncodeToString([]byte(privKey))
 
 	if err := frame.Save(); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		return
 	}
-	c.JSON(http.StatusCreated, frame)
+
+	c.JSON(http.StatusCreated, gin.H{
+		"frame":   frame,
+		"privKey": encodedPrivKey,
+	})
 }
 
 func H_FrameUpdate(c *gin.Context) {
@@ -58,11 +76,17 @@ func H_FrameUpdate(c *gin.Context) {
 		})
 		return
 	}
-
+	if err := OnlyFrame(c, frameIdStr); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
 	var requestBody struct {
-		Name    string `json:"name"`
-		Domain  string `json:"domain"`
-		Webhook string `json:"webhook"`
+		Name      string `json:"name"`
+		Domain    string `json:"domain"`
+		Webhook   string `json:"webhook"`
+		PublicKey string `json:"public_key"`
 	}
 	if err := c.BindJSON(&requestBody); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
@@ -76,7 +100,7 @@ func H_FrameUpdate(c *gin.Context) {
 		})
 		return
 	}
-	if err != db.ERR_NOT_FOUND {
+	if err != nil && err != db.ERR_NOT_FOUND {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -85,14 +109,52 @@ func H_FrameUpdate(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "frame not found"})
 		return
 	}
-	frame.Name = requestBody.Name
-	frame.Domain = requestBody.Domain
+
+	// Clean up database indexes related to the "old" frame
+	endpointKey := fmt.Sprintf("f:endpoint:%s", frame.Webhook)
+	if err = db.Delete([]byte(endpointKey)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to delete f:endpoint: " + err.Error(),
+		})
+		return
+	}
+	nameKey := fmt.Sprintf("f:name:%s", frame.Name)
+	if err = db.Delete([]byte(nameKey)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to delete f:name: " + err.Error(),
+		})
+		return
+	}
+	if frame.PublicKey != nil {
+		if err = db.Delete(models.NewPublicKey(frame.PublicKey, frameId).Bytes()); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to delete f:pk: " + err.Error(),
+			})
+			return
+		}
+	}
+
+	// Now update the frame data and save.
+
+	if requestBody.Name != "" {
+		frame.Name = requestBody.Name
+	}
+	if requestBody.Domain != "" {
+		frame.Domain = requestBody.Domain
+	}
 	if requestBody.Webhook == "" {
 		frame.Webhook = "/f/" + uuid.New().String()
 	} else {
 		frame.Webhook = requestBody.Webhook
 	}
-
+	if requestBody.PublicKey != "" {
+		publicKeyBytes, err := base64.StdEncoding.DecodeString(requestBody.PublicKey)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid base64 PublicKey"})
+			return
+		}
+		frame.PublicKey = publicKeyBytes
+	}
 	if err := frame.Save(); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		return
@@ -101,15 +163,37 @@ func H_FrameUpdate(c *gin.Context) {
 }
 
 func H_SubscriptionsGet(c *gin.Context) {
+	frameIdStr := c.Param("id")
+	if err := OnlyFrame(c, frameIdStr); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
 	retrieveData(c, "s:id:", c.Param("id"), &models.Subscription{})
 }
 
 func H_FramesGet(c *gin.Context) {
+	frameIdStr := c.Param("id")
+	if err := OnlyFrame(c, frameIdStr); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
 	retrieveData(c, "f:id:", c.Param("id"), &models.Frame{})
 }
 
 func H_LogsGet(c *gin.Context) {
-	retrieveData(c, "l:user:", c.Param("userId"), &models.UserLog{})
+	userIdStr := c.Param("userId")
+	frameIdStr := c.Param("frameId")
+	if err := OnlyFrame(c, frameIdStr); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+	retrieveData(c, "l:user:"+frameIdStr+":", userIdStr, &models.UserLog{})
 }
 
 func H_Notify(c *gin.Context) {

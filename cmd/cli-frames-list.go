@@ -26,15 +26,23 @@ func init() {
 }
 func cliFramesList(cmd *cobra.Command, args []string) {
 	jsonFlag, _ := cmd.Flags().GetBool("json")
-	apiEndpointPath := "frames/"
-	endpoint, _ := cmd.Flags().GetString("path")
 	id, _ := cmd.Flags().GetString("id")
-	body := []byte("")
-	method := "GET"
+
+	a := api.ApiCallData{}
+	a.Path = "frames/" + id
+	if len(args) != 0 {
+		a.Path += args[0]
+	}
+	a.Endpoint, _ = cmd.Flags().GetString("path")
+	a.Body = ""
+	a.Method = "GET"
 
 	next := ""
 	for {
-		resBytes, err := api.ApiCall(method, endpoint, apiEndpointPath, id, body, "start="+next)
+		if next != "" {
+			a.RawQuery = fmt.Sprintf("start=%s", next)
+		}
+		resBytes, err := a.Call()
 		if err != nil {
 			fmt.Printf("Failed to make API call: %v", err)
 			return

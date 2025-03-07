@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"log"
 	"math"
@@ -18,6 +19,7 @@ import (
 	"github.com/vrypan/farma/config"
 	"github.com/vrypan/farma/fctools"
 	db "github.com/vrypan/farma/localdb"
+	"github.com/vrypan/farma/models"
 )
 
 var ginServerCmd = &cobra.Command{
@@ -33,17 +35,54 @@ func init() {
 }
 
 func verifySignature() gin.HandlerFunc {
-	keyHex := config.GetString("key.public")
-	pubKey, err := hex.DecodeString(keyHex[2:])
+	keyEncoded := config.GetString("key.public")
+	pubKeyRoot, err := base64.StdEncoding.DecodeString(keyEncoded)
 	if err != nil {
-		log.Fatalf("Invalid key: %v", err)
+		log.Fatalf("Invalid key in config: %v", err)
 	}
-
 	return func(c *gin.Context) {
 		rMethod := c.Request.Method
 		rPath := c.Request.URL.Path
 		rDate := c.GetHeader("Date")
 		rSignature := c.GetHeader("X-Signature")
+
+		rKey := c.GetHeader("X-Public-Key")
+		pk := models.PublicKey{}
+		if pk.DecodeString(rKey) == nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "Invalid public key: " + rKey,
+			})
+			return
+		}
+
+		// if pk.Frame == 0, then we are using the root key stored in config.
+		if pk.Frame == 0 && string(pk.Key) != string(pubKeyRoot) {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "Invalid public key",
+			})
+			return
+		}
+
+		// if pk.Key !=0, we check to see if this is a valid frame key
+		if pk.Frame != 0 {
+			_, err := pk.Get()
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+					"error": "Invalid public key",
+				})
+				return
+			}
+			// if so, set OnlyFrame to the frame id of the key
+			c.Set("OnlyFrame", int(pk.Frame))
+		}
+
+		pubKey := ed25519.PublicKey(pk.Key)
+		if pubKey == nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "Invalid public key",
+			})
+			return
+		}
 
 		parsedTime, err := time.Parse(time.RFC1123, rDate)
 		if err != nil {

@@ -2,8 +2,8 @@ package api
 
 import (
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -17,15 +17,26 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func ApiCall(method string, endpoint string, methodPath string, id string, body []byte, rawQuery string) ([]byte, error) {
-	apiEndpointPath := methodPath
+type ApiCallData struct {
+	FrameId   int
+	PublicKey string
+	Method    string
+	Endpoint  string
+	Path      string
+	Id        string
+	Body      string
+	RawQuery  string
+}
 
-	if endpoint == "" {
-		endpoint = fmt.Sprintf("http://%s/api/v1/%s", config.GetString("host.addr"), apiEndpointPath)
+func (api *ApiCallData) Call() ([]byte, error) {
+	endpoint := api.Path
+
+	if api.Endpoint == "" {
+		endpoint = fmt.Sprintf("http://%s/api/v1/%s", config.GetString("host.addr"), api.Path)
 	} else {
-		endpoint += apiEndpointPath
+		endpoint += api.Path
 	}
-	endpoint = fmt.Sprintf("%s%s", endpoint, id)
+	endpoint = fmt.Sprintf("%s%s", endpoint, api.Id)
 
 	keyPrivate := config.GetString("key.private")
 	if keyPrivate == "" {
@@ -34,23 +45,23 @@ func ApiCall(method string, endpoint string, methodPath string, id string, body 
 
 	}
 
-	keyPrivateBytes, err := hex.DecodeString(keyPrivate[2:])
+	keyPrivateBytes, err := base64.RawStdEncoding.DecodeString(keyPrivate)
 	if err != nil {
 		return nil, fmt.Errorf("Error decoding private key: %v\n", err)
 
 	}
 
-	hostUrl, err := url.Parse(endpoint)
+	hostUrl, err := url.Parse(api.Endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("Error parsing endpoint: %v\n", err)
 
 	}
 
 	request := Request{
-		Method: method,
+		Method: api.Method,
 		Path:   hostUrl.Path,
-		Body:   body,
-		Query:  rawQuery,
+		Body:   []byte(api.Body),
+		Query:  api.RawQuery,
 	}
 	request.SignEd25519(keyPrivateBytes)
 
@@ -120,4 +131,15 @@ func retrieveData(c *gin.Context, prefixKey string, prefixVal string, model any)
 		"result": list,
 		"next":   next,
 	})
+}
+
+func OnlyFrame(c *gin.Context, frameId string) error {
+	of, exists := c.Get("OnlyFrame")
+	if exists {
+		return nil
+	}
+	if frameId == of.(string) {
+		return nil
+	}
+	return errors.New("Frame ID and X-Public-Key mismatch")
 }

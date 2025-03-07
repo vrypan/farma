@@ -1,6 +1,8 @@
 package models
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
 	"fmt"
 
 	db "github.com/vrypan/farma/localdb"
@@ -31,11 +33,11 @@ func (f *Frame) Save() error {
 	key := f.Key(f.Id)
 	data, err := proto.Marshal(f)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error marshaling Frame protobuf: %v\n", err)
 	}
 
 	if err = db.Set([]byte(key), data); err != nil {
-		return err
+		return fmt.Errorf("Error saving Frame: %v\n", err)
 	}
 
 	// In addition to f:id:<id>, we also save
@@ -51,7 +53,22 @@ func (f *Frame) Save() error {
 	if err = db.Set([]byte(nameKey), []byte(key)); err != nil {
 		return err
 	}
+	if f.PublicKey != nil {
+		publicKey := NewPublicKey(f.PublicKey, f.Id).Bytes()
+		if err = db.Set(publicKey, []byte(key)); err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+func (f *Frame) NewPk() ([]byte, error) {
+	pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, fmt.Errorf("Error generating Frame key pair: %v\n", err)
+	}
+	f.PublicKey = pubKey
+	return privKey, nil
 }
 
 func (f *Frame) FromEndpoint(endpoint string) error {

@@ -15,12 +15,13 @@ import (
 )
 
 type Request struct {
-	Method    string
-	Path      string
-	Date      string
-	Signature string
-	Body      []byte
-	Query     string
+	Method     string
+	Path       string
+	Date       string
+	Signature  string
+	Body       []byte
+	Query      string
+	privateKey []byte
 }
 
 type ApiResult struct {
@@ -36,6 +37,7 @@ func (r *Request) SignEd25519(privateKey []byte) *Request {
 	)
 	sig := hex.EncodeToString(signature)
 	r.Signature = sig
+	r.privateKey = privateKey
 	return r
 }
 
@@ -113,6 +115,12 @@ func (r *Request) Send(server string) ([]byte, error) {
 
 	req.Header.Set("Date", r.Date)
 	req.Header.Set("X-Signature", r.Signature)
+
+	if r.privateKey != nil {
+		pubKeyBytes := ed25519.PublicKey(r.privateKey)
+		pubKey := string(pubKeyBytes)
+		req.Header.Set("X-Public_key", pubKey)
+	}
 
 	resp, err := client.Do(req)
 	if err != nil {

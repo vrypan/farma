@@ -28,14 +28,6 @@ func cliNotificationSend(cmd *cobra.Command, args []string) {
 		cmd.Help()
 		return
 	}
-	apiEndpointPath := "notifications/"
-	endpoint, _ := cmd.Flags().GetString("path")
-	method := "POST"
-
-	frameId := args[0]
-	title := args[1]
-	body := args[2]
-	url := args[3]
 
 	userIdsStr := ""
 	for i := 4; i <= len(args)-1; i++ {
@@ -44,15 +36,22 @@ func cliNotificationSend(cmd *cobra.Command, args []string) {
 			userIdsStr += ","
 		}
 	}
-	payload := `{
-		"frameId": ` + frameId + `,
-		"title": "` + title + `",
-		"body": "` + body + `",
-		"url": "` + url + `",
+	a := api.ApiCallData{}
+	a.Path = "notifications/"
+	if len(args) != 0 {
+		a.Path += args[0]
+	}
+	a.Endpoint, _ = cmd.Flags().GetString("path")
+	a.Method = "POST"
+	a.Body = `{
+		"frameId": ` + args[0] + `,
+		"title": "` + args[1] + `",
+		"body": "` + args[2] + `",
+		"url": "` + args[3] + `",
 		"userIds": [` + userIdsStr + `]
 	}`
 
-	res, err := api.ApiCall(method, endpoint, apiEndpointPath, "", []byte(payload), "")
+	res, err := a.Call()
 	if err != nil {
 		fmt.Printf("Failed to make API call: %v %s\n", err, res)
 		return

@@ -10,7 +10,7 @@ import (
 
 func (l *UserLog) Save() error {
 	now := timestamppb.Now()
-	key := fmt.Sprintf("l:user:%d:%d:%d", l.UserId, l.FrameId, now.Seconds)
+	key := fmt.Sprintf("l:user:%d:%d:%d", l.FrameId, l.UserId, now.Seconds)
 	l.Ctime = now
 	data, err := proto.Marshal(l)
 	if err != nil {
@@ -23,7 +23,7 @@ func (l *UserLog) Save() error {
 }
 
 func (l *UserLog) Load(limit int) ([]*UserLog, error) {
-	prefix := fmt.Sprintf("l:user:%d:", l.UserId)
+	prefix := fmt.Sprintf("l:user:%d:%d:", l.FrameId, l.UserId)
 	data, _, err := db.GetPrefixP([]byte(prefix), []byte(prefix), limit)
 
 	if err != nil {
