@@ -10,7 +10,7 @@ import (
 )
 
 type UrlKey struct {
-	FrameId  uint64
+	FrameId  string
 	UserId   uint64
 	Status   SubscriptionStatus
 	Endpoint string
@@ -28,7 +28,7 @@ func (k UrlKey) FromSubscription(sub *Subscription) UrlKey {
 }
 
 func (k UrlKey) String() string {
-	return fmt.Sprintf("s:url:%d:%d:%d:%s:%s", k.FrameId, k.UserId, k.Status.Number(), url.QueryEscape(k.Endpoint), url.QueryEscape(k.Token))
+	return fmt.Sprintf("s:url:%s:%d:%d:%s:%s", k.FrameId, k.UserId, k.Status.Number(), url.QueryEscape(k.Endpoint), url.QueryEscape(k.Token))
 }
 func (k UrlKey) Bytes() []byte {
 	return []byte(k.String())
@@ -39,7 +39,7 @@ func (k UrlKey) DecodeBytes(b []byte) UrlKey {
 func (k UrlKey) DecodeString(s string) UrlKey {
 	parts := strings.Split(s, ":")
 	//if len(parts) == 7 {
-	frameId, _ := strconv.ParseUint(parts[2], 10, 64)
+	frameId := parts[2]
 	userId, _ := strconv.ParseUint(parts[3], 10, 64)
 	statusNum, _ := strconv.Atoi(parts[4])
 	status := SubscriptionStatus(statusNum)
@@ -57,7 +57,7 @@ func (k UrlKey) DecodeString(s string) UrlKey {
 }
 
 func (k UrlKey) Set(subscriptionKey []byte) error {
-	prefix := fmt.Appendf([]byte(""), "s:url:%d:%d:", k.FrameId, k.UserId)
+	prefix := fmt.Appendf([]byte(""), "s:url:%s:%d:", k.FrameId, k.UserId)
 	existingKeys, _, err := db.GetKeysWithPrefix(prefix, prefix, 10)
 	if err != nil {
 		return err

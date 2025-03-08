@@ -1,11 +1,10 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/vrypan/farma/api"
+	api "github.com/vrypan/farma/apiv2"
 )
 
 var cliNotificationSendCmd = &cobra.Command{
@@ -36,37 +35,18 @@ func cliNotificationSend(cmd *cobra.Command, args []string) {
 			userIdsStr += ","
 		}
 	}
-	a := api.ApiCallData{}
-	a.Path = "notifications/"
-	if len(args) != 0 {
-		a.Path += args[0]
-	}
-	a.Endpoint, _ = cmd.Flags().GetString("path")
-	a.Method = "POST"
-	a.Body = `{
+	payload := `{
 		"frameId": ` + args[0] + `,
 		"title": "` + args[1] + `",
 		"body": "` + args[2] + `",
 		"url": "` + args[3] + `",
 		"userIds": [` + userIdsStr + `]
 	}`
-
-	res, err := a.Call()
+	a := api.ApiClient{}.Init("POST", "notification/", []byte(payload), []byte("config"), "")
+	res, err := a.Request("", "")
 	if err != nil {
 		fmt.Printf("Failed to make API call: %v %s\n", err, res)
 		return
 	}
-	var data struct {
-		NotificationId string
-		Version        int
-		Count          int
-	}
-
-	if err := json.Unmarshal(res, &data); err != nil {
-		fmt.Printf("Failed to parse response: %v", err)
-
-		return
-	}
-	fmt.Printf("NotificationId:%s, Count:%d\n", data.NotificationId, data.Count)
-
+	fmt.Println(string(res))
 }

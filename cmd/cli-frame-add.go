@@ -1,13 +1,10 @@
 package cmd
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/vrypan/farma/api"
-	"github.com/vrypan/farma/models"
+	api "github.com/vrypan/farma/apiv2"
 )
 
 var cliFrameAddCmd = &cobra.Command{
@@ -22,43 +19,26 @@ func init() {
 }
 
 func cliFrameAdd(cmd *cobra.Command, args []string) {
-	a := api.ApiCallData{}
-	a.Path = "frames/"
-	if len(args) != 0 {
-		a.Path += args[0]
-	}
-	a.Endpoint, _ = cmd.Flags().GetString("path")
-	a.Method = "POST"
-
 	if len(args) != 2 {
 		cmd.Help()
 		return
 	}
 	frameName := args[0]
 	frameDomain := args[1]
-	a.Body = `{
+	payload := `{
 			"name": "` + frameName + `",
 			"domain": "` + frameDomain + `",
 			"webhook": ""
 	}`
-
-	res, err := a.Call()
+	a := api.ApiClient{}.Init("POST", "frame/", []byte(payload), []byte("config"), "")
+	res, err := a.Request("", "")
 	if err != nil {
 		fmt.Printf("Failed to make API call: %v %s\n", err, res)
 		return
 	}
-	var data struct {
-		Frame   models.Frame
-		PrivKey string `json:"privKey"`
-	}
+	fmt.Println(string(res))
 
-	if err := json.Unmarshal(res, &data); err != nil {
-		fmt.Printf("Failed to parse response: %v", err)
-		return
-	}
-	fmt.Printf("%04d %-32s %45s %s\n", int(data.Frame.Id), data.Frame.Name, data.Frame.Webhook, data.Frame.Domain)
-	encodedPubKey := base64.StdEncoding.EncodeToString([]byte(data.Frame.PublicKey))
-	fmt.Printf("Public key: %s\n", encodedPubKey)
-	fmt.Printf("Private key: %s\n", data.PrivKey)
-	fmt.Println("SAVE YOUR PRIVATE KEY!")
+	fmt.Printf("MAKE SURE YOU SAVE THE ABOVE INFORMATION!")
+	fmt.Printf("Many API calls, require the FrameID, the PublicKey, and the PrivateKey.")
+
 }

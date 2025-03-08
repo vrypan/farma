@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/vrypan/farma/api"
+	api "github.com/vrypan/farma/apiv2"
 )
 
 var cliDbKeysCmd = &cobra.Command{
@@ -17,35 +17,32 @@ var cliDbKeysCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(cliDbKeysCmd)
 	cliDbKeysCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v1/frames/ (from config file)")
-
+	cliDbKeysCmd.Flags().String("start", "", "Start key")
+	cliDbKeysCmd.Flags().Int("limit", 1000, "Max results")
 }
 
 func cliDbKeys(cmd *cobra.Command, args []string) {
-	a := api.ApiCallData{}
-	a.Path = "dbkeys/"
-	if len(args) != 0 {
-		a.Path += args[0]
+	start, _ := cmd.Flags().GetString("start")
+	limit, _ := cmd.Flags().GetInt("limit")
+	path := "/api/v2/dbkeys/"
+	if len(args) > 0 {
+		path = path + args[0]
 	}
-	a.Endpoint, _ = cmd.Flags().GetString("path")
-	a.Body = ""
-	a.Method = "GET"
 
-	next := ""
+	a := api.ApiClient{}.Init("GET", path, nil, []byte("config"), "")
+
+	next := start
+	count := 0
 	for {
-		if next != "" {
-			a.RawQuery = fmt.Sprintf("start=%s", next)
+		if count >= limit {
+			break
 		}
-		resBytes, err := a.Call()
+		resBytes, err := a.Request(next, fmt.Sprintf("%d", limit))
 		if err != nil {
 			fmt.Printf("Failed to make API call: %v", err)
 			return
 		}
-
-		var res struct {
-			Error  string   `json:"error"`
-			Result []string `json:"result"`
-			Next   string   `json:"next"`
-		}
+		var res api.ApiResult
 		if err := json.Unmarshal(resBytes, &res); err != nil {
 			fmt.Printf("Failed to parse response: %v", err)
 			return
@@ -57,5 +54,6 @@ func cliDbKeys(cmd *cobra.Command, args []string) {
 			break
 		}
 		next = res.Next
+		count += len(res.Result)
 	}
 }

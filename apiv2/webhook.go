@@ -1,4 +1,4 @@
-package api
+package apiv2
 
 import (
 	"io"

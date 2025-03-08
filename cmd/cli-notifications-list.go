@@ -3,12 +3,9 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/vrypan/farma/api"
-	"github.com/vrypan/farma/models"
-	"google.golang.org/protobuf/encoding/protojson"
+	api "github.com/vrypan/farma/apiv2"
 )
 
 var cliNotificationsListCmd = &cobra.Command{
@@ -23,58 +20,41 @@ Optionally, show only one notification if notificationId is provided`,
 func init() {
 	rootCmd.AddCommand(cliNotificationsListCmd)
 	cliNotificationsListCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v1/frames/ (from config file)")
-	cliNotificationsListCmd.Flags().BoolP("json", "j", false, "Display entries as JSON")
-
+	cliNotificationsListCmd.Flags().String("start", "", "Start key")
+	cliNotificationsListCmd.Flags().Int("limit", 1000, "Max results")
 }
 
 func cliNotifications(cmd *cobra.Command, args []string) {
-	jsonFlag, _ := cmd.Flags().GetBool("json")
-	apiEndpointPath := "notifications/"
-	endpoint, _ := cmd.Flags().GetString("path")
-	notificationId, _ := cmd.Flags().GetInt("notificationid")
-	var id string
-	if notificationId == 0 {
-		id = ""
-	} else {
-		id = fmt.Sprintf("%d", notificationId)
+	start, _ := cmd.Flags().GetString("start")
+	limit, _ := cmd.Flags().GetInt("limit")
+	path := "/api/v2/notification/"
+	if len(args) > 0 {
+		path = fmt.Sprintf("/api/v2/notification/%s", args[0])
 	}
-	body := []byte("")
-	method := "GET"
-	next := ""
+	a := api.ApiClient{}.Init("GET", path, nil, []byte("config"), "")
+	next := start
+	count := 0
 	for {
-		resBytes, err := api.ApiCall(method, endpoint, apiEndpointPath, id, body, "start="+next)
+		if count >= limit {
+			break
+		}
+		resBytes, err := a.Request(next, fmt.Sprintf("%d", limit))
 		if err != nil {
 			fmt.Printf("Failed to make API call: %v", err)
 			return
 		}
-
 		var res api.ApiResult
 		if err := json.Unmarshal(resBytes, &res); err != nil {
 			fmt.Printf("Failed to parse response: %v", err)
 			return
 		}
-
 		for _, v := range res.Result {
-			item := models.Notification{}
-			if err := protojson.Unmarshal(v, &item); err != nil {
-				fmt.Printf("Failed to parse user log: %v\n", err)
-				continue
-			}
-
-			if jsonFlag == true {
-				fmt.Println(string(v))
-			} else {
-				fmt.Printf("%s %s %3d %3d %3d %s %s %s\n",
-					item.Id, item.Ctime.AsTime().Format(time.RFC3339),
-					len(item.GetSuccessTokens()), len(item.GetFailedTokens()), len(item.GetRateLimitedTokens()),
-					item.Title, item.Message, item.Link,
-				)
-			}
-
+			fmt.Println(string(v))
 		}
 		if res.Next == "" {
 			break
 		}
 		next = res.Next
+		count += len(res.Result)
 	}
 }

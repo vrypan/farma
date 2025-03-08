@@ -20,7 +20,7 @@ func NewSubscription() *Subscription {
 }
 func (s *Subscription) NiceString() string {
 	return fmt.Sprintf(
-		"FrameId=%d UserId=%d AppId=%d Status=%s Url=%s Token=%s Ctime=%s Mtime=%s AppKey=%s Verified=%t",
+		"FrameId=%s UserId=%d AppId=%d Status=%s Url=%s Token=%s Ctime=%s Mtime=%s AppKey=%s Verified=%t",
 		s.FrameId,
 		s.UserId,
 		s.AppId,
@@ -33,14 +33,14 @@ func (s *Subscription) NiceString() string {
 		s.Verified,
 	)
 }
-func (s *Subscription) Key(frameId, userId, appId uint64) string {
-	return fmt.Sprintf("s:id:%d:%d:%d", frameId, userId, appId)
+func (s *Subscription) Key(frameId string, userId, appId uint64) string {
+	return fmt.Sprintf("s:id:%s:%d:%d", frameId, userId, appId)
 }
 func DecodeKey(key []byte) *Subscription {
 	s := &Subscription{}
 	parts := strings.Split(string(key), ":")
 	if len(parts) == 5 {
-		frameId, _ := strconv.ParseUint(parts[2], 10, 64)
+		frameId := parts[2]
 		userId, _ := strconv.ParseUint(parts[3], 10, 64)
 		appId, _ := strconv.ParseUint(parts[4], 10, 64)
 		s.FrameId = frameId

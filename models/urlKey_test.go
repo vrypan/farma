@@ -9,7 +9,7 @@ import (
 func TestUrlKey_Basic(t *testing.T) {
 	db.Open()
 	key := UrlKey{
-		FrameId:  1,
+		FrameId:  "1-2-3",
 		UserId:   1,
 		Status:   1,
 		Endpoint: "endpoint1",
@@ -18,7 +18,7 @@ func TestUrlKey_Basic(t *testing.T) {
 	key.Set([]byte("value1"))
 
 	key2 := UrlKey{
-		FrameId:  1,
+		FrameId:  "1-2-3",
 		UserId:   1,
 		Status:   1,
 		Endpoint: "endpoint1",
@@ -33,7 +33,7 @@ func TestUrlKey_Basic(t *testing.T) {
 	}
 
 	key3 := UrlKey{
-		FrameId:  1,
+		FrameId:  "1-2-3",
 		UserId:   1,
 		Status:   2,
 		Endpoint: "endpoint1",

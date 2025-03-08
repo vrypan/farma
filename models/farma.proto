@@ -6,12 +6,18 @@ option go_package = "github.com/vrypan/farma/models;models";
 import "google/protobuf/timestamp.proto";
 
 message Frame {
-  uint64  id = 1;
+  string id = 1;
   string name = 2;
   string domain = 3;
-  string webhook = 4;
-  bytes publicKey = 5;
+  //string webhook = 4;
+  PubKey publicKey = 4;
 }
+
+message PubKey {
+    string frameId = 1;
+	bytes Key = 2;
+}
+
 enum SubscriptionStatus {
   UNKNOWN = 0;
   UNSUBSCRIBED = 1;
@@ -30,7 +36,7 @@ enum EventType {
 	NOTIFICATION_FAILED_RATE_LIMIT = 8;
 }
 message Subscription {
-    uint64 frameId = 1;
+    string frameId = 1;
     uint64 userId = 2;
     uint64 appId = 3;
     SubscriptionStatus status = 4;
@@ -58,7 +64,7 @@ message Notification {
 }
 
 message UserLog {
-    uint64 frameId = 1;
+    string frameId = 1;
     uint64 userId = 2;
     uint64 appId = 3;
     EventType evtType = 4;

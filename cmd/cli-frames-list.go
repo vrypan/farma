@@ -5,9 +5,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/vrypan/farma/api"
-	"github.com/vrypan/farma/models"
-	"google.golang.org/protobuf/encoding/protojson"
+	api "github.com/vrypan/farma/apiv2"
 )
 
 var cliFramesListCmd = &cobra.Command{
@@ -22,48 +20,34 @@ func init() {
 	rootCmd.AddCommand(cliFramesListCmd)
 	cliFramesListCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v1/frames/ (from config file)")
 	cliFramesListCmd.Flags().String("id", "", "Frame Id or none to list all frames")
-	cliFramesListCmd.Flags().BoolP("json", "j", false, "Output in JSON format")
+	cliFramesListCmd.Flags().String("start", "", "Start key")
+	cliFramesListCmd.Flags().Int("limit", 1000, "Max results")
 }
 func cliFramesList(cmd *cobra.Command, args []string) {
-	jsonFlag, _ := cmd.Flags().GetBool("json")
 	id, _ := cmd.Flags().GetString("id")
+	start, _ := cmd.Flags().GetString("start")
+	limit, _ := cmd.Flags().GetInt("limit")
+	path, _ := cmd.Flags().GetString("path")
 
-	a := api.ApiCallData{}
-	a.Path = "frames/" + id
-	if len(args) != 0 {
-		a.Path += args[0]
+	if path == "" {
+		path = "/api/v2/frame/"
 	}
-	a.Endpoint, _ = cmd.Flags().GetString("path")
-	a.Body = ""
-	a.Method = "GET"
+	a := api.ApiClient{}.Init("GET", path+id, nil, []byte("config"), "")
 
-	next := ""
+	next := start
 	for {
-		if next != "" {
-			a.RawQuery = fmt.Sprintf("start=%s", next)
-		}
-		resBytes, err := a.Call()
+		resBytes, err := a.Request(next, fmt.Sprintf("%d", limit))
 		if err != nil {
 			fmt.Printf("Failed to make API call: %v", err)
 			return
 		}
-
 		var res api.ApiResult
 		if err := json.Unmarshal(resBytes, &res); err != nil {
 			fmt.Printf("Failed to parse response: %v", err)
 			return
 		}
 		for _, v := range res.Result {
-			item := models.Frame{}
-			if err := protojson.Unmarshal(v, &item); err != nil {
-				fmt.Printf("Failed to parse user log: %v\n", err)
-				continue
-			}
-			if jsonFlag {
-				fmt.Println(string(v))
-			} else {
-				fmt.Printf("%04d %-32s %45s %s\n", item.Id, item.Name, item.Webhook, item.Domain)
-			}
+			fmt.Println(string(v))
 		}
 		if res.Next == "" {
 			break
