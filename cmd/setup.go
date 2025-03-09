@@ -3,6 +3,7 @@ package cmd
 import (
 	"crypto/ed25519"
 	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"os"
 
@@ -32,25 +33,26 @@ func setupFidr(cmd *cobra.Command, args []string) {
 	}
 
 	fmt.Println("Generating keys")
-	pubKeyHex := config.GetString("key.public")
-	privKeyHex := config.GetString("key.private")
-	if pubKeyHex != "" {
+	pubKey64 := config.GetString("key.public")
+	privKey64 := config.GetString("key.private")
+	if pubKey64 != "" {
 		fmt.Println(" > A key already exists. Not generarting a new one.")
-		fmt.Printf(" > Public key: %s\n", pubKeyHex)
+		fmt.Printf(" > Public key: %s\n", pubKey64)
 	} else {
 		pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
 		if err != nil {
 			fmt.Printf(" > Error generating keypair: %v\n", err)
 			os.Exit(1)
 		}
-		pubKeyHex = fmt.Sprintf("0x%x", pubKey)
-		privKeyHex = fmt.Sprintf("0x%x", privKey)
-		fmt.Printf(" > Private key: %s\n", privKeyHex)
-		fmt.Printf(" > Public key: %s\n", pubKeyHex)
-		viper.Set("key.public", pubKeyHex)
-		viper.Set("key.private", privKeyHex)
+		//pubKeyHex = fmt.Sprintf("0x%x", pubKey)
+		//privKeyHex = fmt.Sprintf("0x%x", privKey)
+		pubKey64 = base64.StdEncoding.EncodeToString(pubKey)
+		privKey64 = base64.StdEncoding.EncodeToString(privKey)
+		fmt.Printf(" > Private key: %s\n", privKey64)
+		fmt.Printf(" > Public key: %s\n", pubKey64)
+		viper.Set("key.public", pubKey64)
+		viper.Set("key.private", privKey64)
 		fmt.Printf(" >>> Keys are stored in %s/config.yaml\n", configDir)
-		fmt.Println(" >>> Not ideal, but it will work for now.")
 		viper.WriteConfig()
 	}
 	fmt.Printf(" > View/Edit your keypair in %s/%s\n", configDir, "config.yaml")
