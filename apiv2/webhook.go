@@ -12,7 +12,8 @@ import (
 )
 
 func isValidPath(path string) bool {
-	matched, _ := regexp.MatchString(`^[\w/-]*$`, path)
+	matched, _ := regexp.MatchString(`^[\w/-_]*$`, path)
+
 	return matched
 }
 

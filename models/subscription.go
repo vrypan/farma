@@ -151,58 +151,7 @@ func (s *Subscription) Save() error {
 	return nil
 }
 
-func (s *Subscription) Save_old() error {
-	subscriptionKey := s.Key(s.FrameId, s.UserId, s.AppId)
-
-	newTokenKey := NewTokenKey(s.Token)
-	oldTokenKey := TokenKey{}
-
-	newUrlKey := UrlKey{}.FromSubscription(s)
-	oldUrlKey := UrlKey{}
-
-	if s.Ctime == nil || (s.Ctime.Seconds == 0 && s.Ctime.Nanos == 0) {
-		tmp := NewSubscription().FromKey(s.FrameId, s.UserId, s.AppId)
-		if tmp != nil {
-			// If Subscription was already saved in DB
-			s.Ctime = tmp.Ctime // Inherit ctime
-			oldTokenKey = NewTokenKey(tmp.Token)
-			oldUrlKey = oldUrlKey.FromSubscription(tmp)
-		} else {
-			s.Ctime = timestamppb.Now()
-		}
-	}
-	s.Mtime = timestamppb.Now()
-
-	data, err := proto.Marshal(s)
-	if err != nil {
-		return err
-	}
-
-	if err = db.Set([]byte(subscriptionKey), data); err != nil {
-		return err
-	}
-	if oldTokenKey.Token != newTokenKey.Token {
-		if oldTokenKey.Token != "" {
-			if err := db.Delete(oldTokenKey.Bytes()); err != nil {
-				return err
-			}
-			if err := db.Delete(oldUrlKey.Bytes()); err != nil {
-				return err
-			}
-		}
-		if newTokenKey.Token != "" {
-			if err := db.Set(newTokenKey.Bytes(), []byte(subscriptionKey)); err != nil {
-				return err
-			}
-			if err := db.Set(newUrlKey.Bytes(), []byte(subscriptionKey)); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (s *Subscription) FromKey(frameId, userId, appId uint64) *Subscription {
+func (s *Subscription) FromKey(frameId string, userId, appId uint64) *Subscription {
 	db.AssertOpen()
 	key := s.Key(frameId, userId, appId)
 	data, err := db.Get([]byte(key))

@@ -1,12 +1,12 @@
 package models
 
 import (
-	"encoding/base64"
+	"crypto/rand"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 
-	"github.com/google/uuid"
 	db "github.com/vrypan/farma/localdb"
 	"google.golang.org/protobuf/proto"
 )
@@ -17,19 +17,55 @@ var (
 )
 
 func NewFrame() *Frame {
-	return &Frame{}
+	f := Frame{}
+	f.PublicKey = &PubKey{}
+	return &f
 }
 
 func (f *Frame) Key(id string) string {
 	return fmt.Sprintf("f:id:%s", id)
 }
 
+// Returns a 5-character unique id
+func (f *Frame) newFrameId() string {
+	var dbkey string
+	var str string
+	tries := 0
+	for {
+		// Generate random bytes.
+		r := make([]byte, 3)
+		_, err := rand.Read(r)
+		if err != nil {
+			panic(err)
+		}
+		// Encode bytes to base36 (digits, lower case letters)
+		num := new(big.Int).SetBytes(r)
+		str = num.Text(36)
+		dbkey = f.Key(str)
+		// Check if the id is already used
+		if _, err = db.Get([]byte(dbkey)); err == db.ERR_NOT_FOUND {
+			break
+		}
+		tries++
+		if tries > 10 {
+			// This is very very unlikely, if it happens
+			// something is teribly wrong.
+			panic("Too many tries to get a unique random id?!!")
+		}
+	}
+	// Pad with zeros to ensure a 5-character id
+	for len(str) < 5 {
+		str = "0" + str
+	}
+	return str
+}
+
 func (f *Frame) Save() error {
 	db.AssertOpen()
 	if f.Id == "" {
-		newId := uuid.New()
-		encodedId := base64.RawURLEncoding.EncodeToString(newId[:])
-		f.Id = encodedId
+		newId := f.newFrameId()
+		f.Id = newId
+		f.PublicKey.FrameId = f.Id
 	}
 
 	key := f.Key(f.Id)

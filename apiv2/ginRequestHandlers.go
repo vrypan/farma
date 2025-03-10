@@ -60,9 +60,9 @@ func H_FrameAdd(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"frame":      frame,
-		"PrivateKey": encodedPrivKey,
-		"PublicKey":  frame.PublicKey.Encode(),
+		"frame":       frame,
+		"private_key": encodedPrivKey,
+		"public_key":  frame.PublicKey.Encode(),
 	})
 }
 
@@ -129,8 +129,8 @@ func H_FrameUpdate(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{
-		"frame":  frame,
-		"pubKey": frame.PublicKey.Encode(),
+		"frame":      frame,
+		"public_key": frame.PublicKey.Encode(),
 	})
 }
 
@@ -148,6 +148,18 @@ func H_FramesGet(c *gin.Context) {
 	if !validateFrameAccess(c) {
 		return
 	}
+	frameId := c.Param("frameId")
+	prefix := "f:id:" + frameId
+	getData(c, prefix, &models.Frame{})
+	//debug(c)
+}
+
+func H_FramesGetAll(c *gin.Context) {
+	if !validateFrameAccess(c) {
+		return
+	}
+	prefix := "f:id:"
+	getData(c, prefix, &models.Frame{})
 }
 
 // DONE
@@ -192,12 +204,22 @@ func H_DbKeysGet(c *gin.Context) {
 	// No validation, this handler is only accessible to ACL_ADMIN
 	// which was already validated during the signature verification.
 	prefix := c.Param("prefix")[1:]
-	getData(c, prefix, []byte{})
+	getKeys(c, prefix)
 }
 
 // DONE
 func H_Version(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"version": config.FARMA_VERSION,
+	})
+}
+
+func debug(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"debug": gin.H{
+			"keys":    c.Keys,
+			"headers": c.Request.Header,
+			"params":  c.Params,
+		},
 	})
 }

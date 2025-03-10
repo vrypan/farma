@@ -40,6 +40,7 @@ func getData(c *gin.Context, prefix string, model any) {
 		return
 	}
 
+	//fmt.Printf("GetPrefixP(%s, %s, %d)\n", prefixBytes, startBytes, limit)
 	data, next, err := db.GetPrefixP(prefixBytes, startBytes, limit)
 
 	if err != nil {
@@ -61,6 +62,51 @@ func getData(c *gin.Context, prefix string, model any) {
 			return
 		}
 		list[i] = j
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"result": list,
+		"next":   next,
+	})
+}
+
+func getKeys(c *gin.Context, prefix string) {
+	if strings.HasPrefix(prefix, "/") {
+		prefix = strings.TrimPrefix(prefix, "/")
+	}
+	prefixBytes := []byte(prefix)
+
+	var startBytes []byte
+	var err error
+	if s := c.DefaultQuery("start", ""); s != "" {
+		startBytes, err = base64.StdEncoding.DecodeString(s)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to decode start value"})
+			return
+		}
+	} else {
+		startBytes = prefixBytes
+	}
+
+	limitStr := c.DefaultQuery("limit", "100")
+	limit, err := strconv.Atoi(limitStr)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+
+	data, next, err := db.GetKeysWithPrefix(prefixBytes, startBytes, limit)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+
+	list := make([]string, len(data))
+
+	for i, item := range data {
+		list[i] = string(item)
 	}
 
 	c.JSON(http.StatusOK, gin.H{

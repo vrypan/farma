@@ -19,9 +19,12 @@ func init() {
 	cliSubscriptionsCmd.Flags().String("path", "", "API endpoint.")
 	cliSubscriptionsCmd.Flags().String("start", "", "Start key")
 	cliSubscriptionsCmd.Flags().Int("limit", 1000, "Max results")
+	cliSubscriptionsCmd.Flags().String("key", "config", "Private key to use")
+
 }
 
 func cliSubscriptions(cmd *cobra.Command, args []string) {
+	key, _ := cmd.Flags().GetString("key")
 	start, _ := cmd.Flags().GetString("start")
 	limit, _ := cmd.Flags().GetInt("limit")
 	path := "/api/v2/subscription/"
@@ -29,7 +32,7 @@ func cliSubscriptions(cmd *cobra.Command, args []string) {
 		path += args[0]
 	}
 
-	a := api.ApiClient{}.Init("GET", path, nil, []byte("config"), "")
+	a := api.ApiClient{}.Init("GET", path, nil, key, "")
 	next := start
 	count := 0
 	for {

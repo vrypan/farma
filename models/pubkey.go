@@ -17,10 +17,8 @@ func (k *PubKey) GenerateKey(frameId string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error generating Frame key pair: %v\n", err)
 	}
-	k = &PubKey{
-		Key:     pubKey,
-		FrameId: frameId,
-	}
+	k.FrameId = frameId
+	k.Key = pubKey
 	return privKey, nil
 }
 
@@ -68,4 +66,11 @@ func (k *PubKey) Decode(header string) error {
 }
 func (k *PubKey) Encode() string {
 	return fmt.Sprintf("%s:%s", k.FrameId, base64.StdEncoding.EncodeToString(k.Key))
+}
+
+func (k *PubKey) FromPrivateKey(frameId string, privKey []byte) *PubKey {
+	pubKey := ed25519.PrivateKey(privKey).Public().(ed25519.PublicKey)
+	k.FrameId = frameId
+	k.Key = pubKey
+	return k
 }

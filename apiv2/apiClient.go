@@ -36,19 +36,24 @@ func (api ApiClient) Init(
 	httpMethod string,
 	httpPath string,
 	payload []byte,
-	privateKey []byte,
+	privateKey string,
 	frameId string,
 ) ApiClient {
 	if strings.HasPrefix(httpPath, "http") {
 		api.HttpPath = httpPath
 	} else {
-		api.HttpPath = fmt.Sprintf("http://%s/api/v2/%s", config.GetString("host.addr"), httpPath)
+		api.HttpPath = fmt.Sprintf("http://%s%s", config.GetString("host.addr"), httpPath)
 	}
 	api.HttpMethod = httpMethod
 	api.Payload = payload
 
-	if privateKey != nil && string(privateKey) != "config" {
-		pubKeyBytes := ed25519.PublicKey(privateKey)
+	if privateKey != "" && privateKey != "config" {
+		privateKeyBytes, err := base64.StdEncoding.DecodeString(privateKey)
+		if err != nil {
+			panic(err)
+		}
+		pubKeyBytes := ed25519.PrivateKey(privateKeyBytes).Public().(ed25519.PublicKey)
+		api.PrivateKey = privateKeyBytes
 		api.publicKey = frameId + ":" + base64.StdEncoding.EncodeToString(pubKeyBytes)
 	}
 	if string(privateKey) == "config" {
@@ -58,10 +63,9 @@ func (api ApiClient) Init(
 			panic(err)
 		}
 		api.PrivateKey = privateKeyBytes
-		pubKeyBytes := ed25519.PublicKey(privateKeyBytes)
+		pubKeyBytes := ed25519.PrivateKey(privateKeyBytes).Public().(ed25519.PublicKey)
 		api.publicKey = frameId + ":" + base64.StdEncoding.EncodeToString(pubKeyBytes)
 	}
-
 	return api
 }
 
@@ -74,7 +78,7 @@ func (api *ApiClient) Request(start string, limit string) ([]byte, error) {
 		requestUrl.Query().Add("start", start)
 	}
 	client := &http.Client{}
-	req, err := http.NewRequest(api.HttpMethod, requestUrl.RequestURI(), bytes.NewBuffer(api.Payload))
+	req, err := http.NewRequest(api.HttpMethod, requestUrl.String(), bytes.NewBuffer(api.Payload))
 	if err != nil {
 		return nil, fmt.Errorf("Error creating request: %v", err)
 	}
@@ -87,7 +91,7 @@ func (api *ApiClient) Request(start string, limit string) ([]byte, error) {
 		)
 		sig := base64.StdEncoding.EncodeToString(signature)
 		req.Header.Set("X-Signature", sig)
-		req.Header.Set("X-Public_key", api.publicKey)
+		req.Header.Set("X-Public-Key", api.publicKey)
 	}
 
 	resp, err := client.Do(req)
@@ -96,12 +100,9 @@ func (api *ApiClient) Request(start string, limit string) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 
-	if (resp.StatusCode != http.StatusOK) && (resp.StatusCode != http.StatusCreated) {
-		return nil, fmt.Errorf("Server returned status code %d", resp.StatusCode)
-	}
 	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("Error reading response body: %v", err)
+	if (resp.StatusCode != http.StatusOK) && (resp.StatusCode != http.StatusCreated) {
+		return body, fmt.Errorf("Server returned status code %d", resp.StatusCode)
 	}
 	return body, nil
 

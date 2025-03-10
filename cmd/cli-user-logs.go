@@ -19,12 +19,15 @@ func init() {
 	cliLogsCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v1/frames/ (from config file)")
 	cliLogsCmd.Flags().String("start", "", "Start key")
 	cliLogsCmd.Flags().Int("limit", 1000, "Max results")
+	cliLogsCmd.Flags().String("key", "config", "Private key to use")
+
 }
 
 func cliLogs(cmd *cobra.Command, args []string) {
+	key, _ := cmd.Flags().GetString("key")
 	start, _ := cmd.Flags().GetString("start")
 	limit, _ := cmd.Flags().GetInt("limit")
-	path := "/api/v2/subscription/"
+	path := "/api/v2/logs/"
 	if len(args) > 0 {
 		path += args[0]
 	}
@@ -32,7 +35,7 @@ func cliLogs(cmd *cobra.Command, args []string) {
 		path += "/" + args[1]
 	}
 
-	a := api.ApiClient{}.Init("GET", path, nil, []byte("config"), "")
+	a := api.ApiClient{}.Init("GET", path, nil, key, "")
 	next := start
 	count := 0
 	for {

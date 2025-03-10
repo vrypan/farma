@@ -19,9 +19,11 @@ func init() {
 	cliFrameUpdCmd.Flags().String("public-key", "", "Base64 encoded public key")
 	cliFrameUpdCmd.Flags().String("name", "", "Frame name")
 	cliFrameUpdCmd.Flags().String("domain", "", "Frame domain")
+	cliFrameUpdCmd.Flags().String("key", "config", "Private key to use.")
 }
 
 func cliFrameUpd(cmd *cobra.Command, args []string) {
+	key, _ := cmd.Flags().GetString("key")
 	if len(args) != 1 {
 		cmd.Help()
 		return
@@ -36,7 +38,7 @@ func cliFrameUpd(cmd *cobra.Command, args []string) {
 		"domain": "` + domain + `",
 		"public_key": "` + public_key + `"
 		}`
-	a := api.ApiClient{}.Init("POST", "frame/"+frameId, []byte(payload), []byte("config"), "")
+	a := api.ApiClient{}.Init("POST", "frame/"+frameId, []byte(payload), key, "")
 	res, err := a.Request("", "")
 	if err != nil {
 		fmt.Printf("Failed to make API call: %v %s\n", err, res)
@@ -46,5 +48,4 @@ func cliFrameUpd(cmd *cobra.Command, args []string) {
 
 	fmt.Printf("MAKE SURE YOU SAVE THE ABOVE INFORMATION!")
 	fmt.Printf("Many API calls, require the FrameID, the PublicKey, and the PrivateKey.")
-
 }
