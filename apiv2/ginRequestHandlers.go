@@ -2,10 +2,13 @@ package apiv2
 
 import (
 	"encoding/base64"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vrypan/farma/config"
+	db "github.com/vrypan/farma/localdb"
 	"github.com/vrypan/farma/models"
 )
 
@@ -66,7 +69,6 @@ func H_FrameAdd(c *gin.Context) {
 	})
 }
 
-// DONE
 func H_FrameUpdate(c *gin.Context) {
 	if !validateFrameAccess(c) {
 		return
@@ -134,7 +136,6 @@ func H_FrameUpdate(c *gin.Context) {
 	})
 }
 
-// DONE
 func H_SubscriptionsGet(c *gin.Context) {
 	if !validateFrameAccess(c) {
 		return
@@ -162,12 +163,11 @@ func H_FramesGetAll(c *gin.Context) {
 	getData(c, prefix, &models.Frame{})
 }
 
-// DONE
 func H_LogsGet(c *gin.Context) {
 	if !validateFrameAccess(c) {
 		return
 	}
-	frameId := c.Param("frameId")[1:]
+	frameId := c.Param("frameId")
 	userId := c.Param("userId")[1:]
 	prefix := "l:user:" + frameId + ":"
 	if userId != "" {
@@ -180,8 +180,188 @@ func H_Notify(c *gin.Context) {
 	if !validateFrameAccess(c) {
 		return
 	}
+	var ver int
+	var err error
+	var requestBody struct {
+		FrameId string   `json:"frameId"`
+		Title   string   `json:"title"`
+		Body    string   `json:"body"`
+		Url     string   `json:"url"`
+		UserIds []uint64 `json:"userIds"`
+	}
+
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+
+	frame := models.NewFrame().FromId(requestBody.FrameId)
+	if frame.Id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "FRAME NOT FOUND"})
+		return
+	}
+
+	if requestBody.Url == "" {
+		requestBody.Url = "https://" + frame.Domain
+	}
+
+	keys := make(map[string][][]byte)
+
+	if len(requestBody.UserIds) == 0 {
+		requestBody.UserIds = append(requestBody.UserIds, 0)
+	}
+	for _, userId := range requestBody.UserIds {
+		prefix := []byte("s:url:" + requestBody.FrameId + ":")
+		if userId != 0 {
+			prefix = append(prefix, strconv.Itoa(int(userId))+":"...)
+		}
+
+		startKey := prefix
+		for {
+			urlKeys, nextKey, err := db.GetKeysWithPrefix(prefix, startKey, 1000)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err})
+				return
+			}
+			for _, urlKeyBytes := range urlKeys {
+				urlKey := models.UrlKey{}.DecodeBytes(urlKeyBytes)
+				if urlKey.Status == models.SubscriptionStatus_SUBSCRIBED || urlKey.Status == models.SubscriptionStatus_RATE_LIMITED {
+					keys[urlKey.Endpoint] = append(keys[urlKey.Endpoint], urlKeyBytes)
+				}
+			}
+			startKey = nextKey
+			if len(urlKeys) < 1000 {
+				break
+			}
+		}
+	}
+	fmt.Printf("DEBUG: %v\n", keys)
+	notificationId := ""
+	notificationCount := 0
+	for url, urlKeys := range keys {
+		// Calling notification.Send() for each client endpoint
+		// One client may have multiple endpoints, and different
+		// clients will have different endpoints.
+		notification := models.NewNotification(
+			requestBody.FrameId,
+			notificationId,
+			requestBody.Title,
+			requestBody.Body,
+			requestBody.Url,
+			url,
+			urlKeys,
+		)
+		notificationId = notification.Id
+		notificationCount += len(urlKeys)
+		if err := notification.Send(); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+			return
+		}
+		ver, err = notification.Update()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"NotificationId":      notificationId,
+		"NotificationVersion": ver,
+		"Count":               notificationCount,
+	})
 }
 
+/*
+func H_Notify(c *gin.Context) {
+	var ver int
+	var err error
+	var requestBody struct {
+		FrameId uint64   `json:"frameId"`
+		Title   string   `json:"title"`
+		Body    string   `json:"body"`
+		Url     string   `json:"url"`
+		UserIds []uint64 `json:"userIds"`
+	}
+
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+
+	frame := models.NewFrame().FromId(requestBody.FrameId)
+	if frame.Id == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "FRAME NOT FOUND"})
+		return
+	}
+
+	if requestBody.Url == "" {
+		requestBody.Url = "https://" + frame.Domain
+	}
+
+	keys := make(map[string][][]byte)
+
+	if len(requestBody.UserIds) == 0 {
+		requestBody.UserIds = append(requestBody.UserIds, 0)
+	}
+	for _, userId := range requestBody.UserIds {
+		prefix := []byte("s:url:" + strconv.Itoa(int(requestBody.FrameId)) + ":")
+		if userId != 0 {
+			prefix = append(prefix, strconv.Itoa(int(userId))+":"...)
+		}
+
+		startKey := prefix
+		for {
+			urlKeys, nextKey, err := db.GetKeysWithPrefix(prefix, startKey, 1000)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err})
+				return
+			}
+			for _, urlKeyBytes := range urlKeys {
+				urlKey := models.UrlKey{}.DecodeBytes(urlKeyBytes)
+				if urlKey.Status == models.SubscriptionStatus_SUBSCRIBED || urlKey.Status == models.SubscriptionStatus_RATE_LIMITED {
+					keys[urlKey.Endpoint] = append(keys[urlKey.Endpoint], urlKeyBytes)
+				}
+			}
+			startKey = nextKey
+			if len(urlKeys) < 1000 {
+				break
+			}
+		}
+	}
+
+	notificationId := ""
+	notificationCount := 0
+	for url, urlKeys := range keys {
+		notification := models.NewNotification(
+			notificationId,
+			requestBody.Title,
+			requestBody.Body,
+			requestBody.Url,
+			url,
+			urlKeys,
+		)
+		notificationId = notification.Id
+		notificationCount += len(urlKeys)
+		if err := notification.Send(); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+			return
+		}
+		ver, err = notification.Update()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"NotificationId":      notificationId,
+		"NotificationVersion": ver,
+		"Count":               notificationCount,
+	})
+}
+
+
+*/
 // DONE
 func H_NotificationsGet(c *gin.Context) {
 	if !validateFrameAccess(c) {
@@ -190,7 +370,7 @@ func H_NotificationsGet(c *gin.Context) {
 	if !validateFrameAccess(c) {
 		return
 	}
-	frameId := c.Param("frameId")[1:]
+	frameId := c.Param("frameId")
 	notificationId := c.Param("notificationId")[1:]
 	prefix := "n:id:" + frameId + ":"
 	if notificationId != "" {

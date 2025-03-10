@@ -6,8 +6,10 @@ import (
 	db "github.com/vrypan/farma/localdb"
 )
 
+const TESTFRAME = "zzzzz"
+
 func cleanup(t *testing.T) int {
-	keys, _, _ := db.GetKeysWithPrefix([]byte("n:id:test-"), []byte("n:id:test-"), 1000)
+	keys, _, _ := db.GetKeysWithPrefix([]byte("n:id:zzzzz"), []byte("n:id:zzzzz"), 1000)
 	for _, key := range keys {
 		err := db.Delete(key)
 		if err != nil {
@@ -23,6 +25,7 @@ func TestNotification_Save_Load(t *testing.T) {
 	defer db.Close()
 	cleanup(t)
 	n := NewNotification(
+		TESTFRAME,
 		"test-0001",
 		"Test title",
 		"Test message",
@@ -33,7 +36,7 @@ func TestNotification_Save_Load(t *testing.T) {
 	n.Save()
 	t.Logf("Saved one entry, with Id %s", n.Id)
 	n2 := &Notification{}
-	notificationList, err := n2.Load("test-0001")
+	notificationList, err := n2.Load(TESTFRAME, "test-0001")
 	if err != nil {
 		t.Errorf("Error loading notification: %v", err)
 	}
@@ -69,6 +72,7 @@ func TestNotification_Versions(t *testing.T) {
 	defer db.Close()
 	cleanup(t)
 	n := NewNotification(
+		"zzzzz",
 		"test-0002",
 		"Test title",
 		"Test message",
@@ -99,7 +103,7 @@ func TestNotification_Versions(t *testing.T) {
 	}
 	t.Logf("Saved 3 entries, with Id %s", n.Id)
 	n2 := &Notification{}
-	notificationList, err := n2.Load("test-0002")
+	notificationList, err := n2.Load(TESTFRAME, "test-0002")
 	if err != nil {
 		t.Errorf("Error loading notification: %v", err)
 	}

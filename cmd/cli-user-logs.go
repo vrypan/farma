@@ -29,7 +29,7 @@ func cliLogs(cmd *cobra.Command, args []string) {
 	limit, _ := cmd.Flags().GetInt("limit")
 	path := "/api/v2/logs/"
 	if len(args) > 0 {
-		path += args[0]
+		path += args[0] + "/"
 	}
 	if len(args) > 1 {
 		path += "/" + args[1]

@@ -50,17 +50,18 @@ message Subscription {
 }
 
 message Notification {
-    string id = 1;
-    string endpoint = 2;
-    string title = 3;
-    string message = 4;
-    string link = 5;
-    repeated string tokens = 6;
-    repeated string successTokens = 7;
-    repeated string failedTokens = 8;
-    repeated string rateLimitedTokens = 9;
-    google.protobuf.Timestamp ctime = 10;
-    optional uint64 version = 11;
+    string frameId = 1;
+    string id = 2;
+    string endpoint = 3;
+    string title = 4;
+    string message = 5;
+    string link = 6;
+    repeated string tokens = 7;
+    repeated string successTokens = 8;
+    repeated string failedTokens = 9;
+    repeated string rateLimitedTokens = 10;
+    google.protobuf.Timestamp ctime = 11;
+    optional uint64 version = 12;
 }
 
 message UserLog {

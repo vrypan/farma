@@ -102,13 +102,17 @@ func (f *Frame) FromId(id string) *Frame {
 	return f
 }
 
-func (f *Frame) FromEndpoint(endpoint string) *Frame {
+func (f *Frame) FromEndpoint(endpoint string) error {
 	parts := strings.Split(endpoint, "/")
 	if len(parts) != 3 {
-		return nil
+		return errors.New("Expected /f/<frameId> path.")
 	}
-	frameId := f.Key(parts[2])
-	return f.FromId(frameId)
+	frameId := parts[2]
+	fmt.Println("DEBUG:frameId", frameId)
+	if f.FromId(frameId) == nil {
+		return errors.New("Error fetching frame from db.")
+	}
+	return nil
 }
 
 func (f *Frame) Delete() error {

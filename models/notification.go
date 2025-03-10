@@ -14,6 +14,7 @@ import (
 )
 
 func NewNotification(
+	frameId string,
 	id string,
 	title string,
 	message string,
@@ -31,6 +32,7 @@ func NewNotification(
 		id = uuid.New().String()
 	}
 	return &Notification{
+		FrameId:  frameId,
 		Id:       id,
 		Endpoint: endpoint,
 		Title:    title,
@@ -181,17 +183,17 @@ func (n *Notification) Send() error {
 }
 
 func (n *Notification) Prefix() string {
-	return "n:id:" + n.Id + ":000:"
+	return "n:id:" + n.FrameId + ":" + n.Id + ":"
 }
 func (n *Notification) PrefixBytes() []byte {
-	return []byte("n:id:" + n.Id + ":000:")
+	return []byte(n.Prefix())
 }
 
 func (n *Notification) Save() (int, error) {
 	n.Ctime = timestamppb.Now()
 	nextVersion := uint64(0)
 	var err error
-	prefix := []byte("n:id:" + n.Id + ":")
+	prefix := n.PrefixBytes()
 	for {
 		keys, next, err := db.GetKeysWithPrefix(prefix, prefix, 100)
 		if err != nil {
@@ -202,7 +204,7 @@ func (n *Notification) Save() (int, error) {
 			break
 		}
 	}
-	nextKey := []byte("n:id:" + n.Id + ":" + fmt.Sprintf("%03d", nextVersion))
+	nextKey := []byte(n.Prefix() + fmt.Sprintf("%03d", nextVersion))
 	n.Version = &nextVersion
 	notificationBytes, err := proto.Marshal(n)
 	if err != nil {
@@ -216,7 +218,7 @@ func (n *Notification) Save() (int, error) {
 }
 
 func (n *Notification) Update() (int, error) {
-	key := []byte("n:id:" + n.Id + ":" + fmt.Sprintf("%03d", n.GetVersion()))
+	key := []byte(n.Prefix() + fmt.Sprintf("%03d", n.GetVersion()))
 	notificationBytes, err := proto.Marshal(n)
 	if err != nil {
 		return 0, fmt.Errorf("Error marshaling notification: %v", err)
@@ -228,10 +230,12 @@ func (n *Notification) Update() (int, error) {
 	return int(*n.Version), nil
 }
 
-func (n *Notification) Load(id string) ([]*Notification, error) {
+func (n *Notification) Load(frameId string, notificationId string) ([]*Notification, error) {
 	var notifications []*Notification
-	prefix := []byte("n:id:" + id + ":")
-	next := []byte("n:id:" + id + ":0")
+	n.FrameId = frameId
+	n.Id = notificationId
+	prefix := n.PrefixBytes()
+	next := prefix
 	for {
 		keys, next, err := db.GetKeysWithPrefix(prefix, next, 100)
 		if err != nil {

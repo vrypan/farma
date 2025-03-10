@@ -44,7 +44,6 @@ func WebhookHandler(hub *fctools.FarcasterHub) gin.HandlerFunc {
 			c.String(http.StatusNotFound, "Unknown endpoint")
 			return
 		}
-
 		body, err := io.ReadAll(c.Request.Body)
 		if err != nil {
 			c.AbortWithStatus(http.StatusNoContent)

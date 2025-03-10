@@ -15,7 +15,7 @@ var cliNotificationSendCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(cliNotificationSendCmd)
-	cliNotificationSendCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v1/frames/ (from config file)")
+	cliNotificationSendCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v2/frames/ (from config file)")
 	cliNotificationSendCmd.Flags().String("key", "config", "Private key to use")
 }
 
@@ -26,6 +26,9 @@ func cliNotificationSend(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	frameId := args[0]
+	path := "/api/v2/notification/" + frameId
+
 	userIdsStr := ""
 	for i := 4; i <= len(args)-1; i++ {
 		userIdsStr += args[i]
@@ -34,13 +37,14 @@ func cliNotificationSend(cmd *cobra.Command, args []string) {
 		}
 	}
 	payload := `{
-		"frameId": ` + args[0] + `,
+		"frameId": "` + frameId + `",
 		"title": "` + args[1] + `",
 		"body": "` + args[2] + `",
 		"url": "` + args[3] + `",
 		"userIds": [` + userIdsStr + `]
 	}`
-	a := api.ApiClient{}.Init("POST", "notification/", []byte(payload), key, "")
+
+	a := api.ApiClient{}.Init("POST", path, []byte(payload), key, "")
 	res, err := a.Request("", "")
 	if err != nil {
 		fmt.Printf("Failed to make API call: %v %s\n", err, res)

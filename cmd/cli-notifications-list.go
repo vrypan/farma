@@ -29,7 +29,7 @@ func cliNotifications(cmd *cobra.Command, args []string) {
 	limit, _ := cmd.Flags().GetInt("limit")
 	path := "/api/v2/notification/"
 	if len(args) > 0 {
-		path += args[0]
+		path += args[0] + "/"
 	}
 	a := api.ApiClient{}.Init("GET", path, nil, key, "")
 	next := start
