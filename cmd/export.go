@@ -45,12 +45,14 @@ func exportData(cmd *cobra.Command, args []string) {
 	exportEntities("s_id", []byte("s:id:"), outDir, &models.Subscription{})
 	exportEntities("f_id", []byte("f:id:"), outDir, &models.Frame{})
 	exportEntities("n_id", []byte("n:id:"), outDir, &models.Notification{})
-	exportKeys("f_name", []byte("f:name:"), outDir)
-	exportKeys("f_endpoint", []byte("f:endpoint:"), outDir)
-	exportKeys("s_url", []byte("s:url:"), outDir)
-	exportKeys("s_token", []byte("s:token:"), outDir)
-	exportKeys("f_pk", []byte("f:pk:"), outDir)
-	exportSeq("FrameId", []byte("FrameId"), outDir)
+	/*
+		exportKeys("f_name", []byte("f:name:"), outDir)
+		exportKeys("f_endpoint", []byte("f:endpoint:"), outDir)
+		exportKeys("s_url", []byte("s:url:"), outDir)
+		exportKeys("s_token", []byte("s:token:"), outDir)
+		exportKeys("f_pk", []byte("f:pk:"), outDir)
+		exportSeq("FrameId", []byte("FrameId"), outDir)
+	*/
 }
 
 func exportEntities(entityName string, prefix []byte, outDir string, entity proto.Message) {

@@ -31,7 +31,7 @@ func TestNotification_Save_Load(t *testing.T) {
 		"Test message",
 		"https://link.example.com",
 		"https://endpoint.example.com",
-		[][]byte{},
+		[]string{},
 	)
 	n.Save()
 	t.Logf("Saved one entry, with Id %s", n.Id)
@@ -78,7 +78,7 @@ func TestNotification_Versions(t *testing.T) {
 		"Test message",
 		"https://link.example.com",
 		"https://endpoint.example.com",
-		[][]byte{},
+		[]string{},
 	)
 	v, err := n.Save()
 	if err != nil {

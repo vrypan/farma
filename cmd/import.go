@@ -43,11 +43,11 @@ func importData(cmd *cobra.Command, args []string) {
 	processPbFile("f_id", outDir)
 	processPbFile("l_user", outDir)
 	processPbFile("n_id", outDir)
-	processKvFile("f_name", outDir)
-	processKvFile("f_endpoint", outDir)
-	processKvFile("s_url", outDir)
-	processKvFile("s_token", outDir)
-	processSeqFile("FrameId", outDir)
+	//processKvFile("f_name", outDir)
+	//processKvFile("f_endpoint", outDir)
+	//processKvFile("s_url", outDir)
+	//processKvFile("s_token", outDir)
+	//processSeqFile("FrameId", outDir)
 
 }
 

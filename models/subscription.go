@@ -121,8 +121,6 @@ func (s *Subscription) Save() error {
 	// Is there an existing subscription in the database?
 	if exSub != nil {
 		s.Ctime = exSub.GetCtime()
-		urlKey := UrlKey{}.FromSubscription(exSub)
-		urlKey.Delete()
 		if exSub.GetToken() != "" {
 			tokenKey := NewTokenKey(exSub.GetToken())
 			tokenKey.Delete()
@@ -132,7 +130,6 @@ func (s *Subscription) Save() error {
 	}
 
 	tokenKey := NewTokenKey(s.Token)
-	urlKey := UrlKey{}.FromSubscription(s)
 	s.Mtime = timestamppb.Now()
 
 	data, err := proto.Marshal(s)
@@ -143,9 +140,6 @@ func (s *Subscription) Save() error {
 		return err
 	}
 	if err = tokenKey.Set([]byte(subscriptionKey)); err != nil {
-		return err
-	}
-	if err = urlKey.Set([]byte(subscriptionKey)); err != nil {
 		return err
 	}
 	return nil
@@ -174,9 +168,12 @@ func (s *Subscription) FromKeyBytes(key []byte) *Subscription {
 	return s
 }
 
-func SubscriptionsByFrame(frameId uint64, limit int) ([]*Subscription, []byte, error) {
-	prefix := fmt.Sprintf("s:id:%d:", frameId)
-	data, nextKey, err := db.GetPrefixP([]byte(prefix), []byte(prefix), limit)
+func SubscriptionsByFrame(frameId string, start []byte, limit int) ([]*Subscription, []byte, error) {
+	prefix := fmt.Appendf([]byte(""), "s:id:%s:", frameId)
+	if start == nil {
+		start = prefix
+	}
+	data, nextKey, err := db.GetPrefixP(prefix, start, limit)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -189,4 +186,22 @@ func SubscriptionsByFrame(frameId uint64, limit int) ([]*Subscription, []byte, e
 		subscriptions[i] = s
 	}
 	return subscriptions, nextKey, nil
+}
+
+// Fetch all frame,user subscriptions (all clients). Up to 1000 results.
+func SubscriptionsByFrameUser(frameId string, userId uint64) ([]*Subscription, error) {
+	prefix := fmt.Appendf([]byte(""), "s:id:%s:%d", frameId, userId)
+	data, _, err := db.GetPrefixP(prefix, prefix, 1000)
+	if err != nil {
+		return nil, err
+	}
+	subscriptions := make([]*Subscription, len(data))
+	for i, subscription := range data {
+		s := NewSubscription()
+		if err := proto.Unmarshal(subscription, s); err != nil {
+			return nil, err
+		}
+		subscriptions[i] = s
+	}
+	return subscriptions, nil
 }

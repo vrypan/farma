@@ -3,12 +3,10 @@ package apiv2
 import (
 	"encoding/base64"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vrypan/farma/config"
-	db "github.com/vrypan/farma/localdb"
 	"github.com/vrypan/farma/models"
 )
 
@@ -188,39 +186,46 @@ func H_Notify(c *gin.Context) {
 		requestBody.Url = "https://" + frame.Domain
 	}
 
-	keys := make(map[string][][]byte)
+	keys := make(map[string][]string)
 
-	if len(requestBody.UserIds) == 0 {
-		requestBody.UserIds = append(requestBody.UserIds, 0)
-	}
-	for _, userId := range requestBody.UserIds {
-		prefix := []byte("s:url:" + requestBody.FrameId + ":")
-		if userId != 0 {
-			prefix = append(prefix, strconv.Itoa(int(userId))+":"...)
-		}
-
-		startKey := prefix
-		for {
-			urlKeys, nextKey, err := db.GetKeysWithPrefix(prefix, startKey, 1000)
+	if len(requestBody.UserIds) > 0 {
+		// Notify only specific subscribers
+		for _, userId := range requestBody.UserIds {
+			subscriptions, err := models.SubscriptionsByFrameUser(requestBody.FrameId, userId)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err})
 				return
 			}
-			for _, urlKeyBytes := range urlKeys {
-				urlKey := models.UrlKey{}.DecodeBytes(urlKeyBytes)
-				if urlKey.Status == models.SubscriptionStatus_SUBSCRIBED || urlKey.Status == models.SubscriptionStatus_RATE_LIMITED {
-					keys[urlKey.Endpoint] = append(keys[urlKey.Endpoint], urlKeyBytes)
+			for _, s := range subscriptions {
+				if s.Status == models.SubscriptionStatus_SUBSCRIBED || s.Status == models.SubscriptionStatus_RATE_LIMITED {
+					keys[s.Url] = append(keys[s.Url], s.Token)
 				}
 			}
-			startKey = nextKey
-			if len(urlKeys) < 1000 {
+		}
+	} else {
+		// Notify all frame subscribers
+		var start []byte
+		for {
+			subscriptions, next, err := models.SubscriptionsByFrame(requestBody.FrameId, start, 1000)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err})
+				return
+			}
+			for _, s := range subscriptions {
+				if s.Status == models.SubscriptionStatus_SUBSCRIBED || s.Status == models.SubscriptionStatus_RATE_LIMITED {
+					keys[s.Url] = append(keys[s.Url], s.Token)
+				}
+			}
+			if len(subscriptions) < 1000 {
 				break
 			}
+			start = next
 		}
 	}
+
 	notificationId := ""
 	notificationCount := 0
-	for url, urlKeys := range keys {
+	for url, tokens := range keys {
 		// Calling notification.Send() for each client endpoint
 		// One client may have multiple endpoints, and different
 		// clients will have different endpoints.
@@ -231,10 +236,10 @@ func H_Notify(c *gin.Context) {
 			requestBody.Body,
 			requestBody.Url,
 			url,
-			urlKeys,
+			tokens,
 		)
 		notificationId = notification.Id
-		notificationCount += len(urlKeys)
+		notificationCount += len(tokens)
 		if err := notification.Send(); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err})
 			return
@@ -253,97 +258,6 @@ func H_Notify(c *gin.Context) {
 	})
 }
 
-/*
-func H_Notify(c *gin.Context) {
-	var ver int
-	var err error
-	var requestBody struct {
-		FrameId uint64   `json:"frameId"`
-		Title   string   `json:"title"`
-		Body    string   `json:"body"`
-		Url     string   `json:"url"`
-		UserIds []uint64 `json:"userIds"`
-	}
-
-	if err := c.ShouldBindJSON(&requestBody); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
-		return
-	}
-
-	frame := models.NewFrame().FromId(requestBody.FrameId)
-	if frame.Id == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "FRAME NOT FOUND"})
-		return
-	}
-
-	if requestBody.Url == "" {
-		requestBody.Url = "https://" + frame.Domain
-	}
-
-	keys := make(map[string][][]byte)
-
-	if len(requestBody.UserIds) == 0 {
-		requestBody.UserIds = append(requestBody.UserIds, 0)
-	}
-	for _, userId := range requestBody.UserIds {
-		prefix := []byte("s:url:" + strconv.Itoa(int(requestBody.FrameId)) + ":")
-		if userId != 0 {
-			prefix = append(prefix, strconv.Itoa(int(userId))+":"...)
-		}
-
-		startKey := prefix
-		for {
-			urlKeys, nextKey, err := db.GetKeysWithPrefix(prefix, startKey, 1000)
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err})
-				return
-			}
-			for _, urlKeyBytes := range urlKeys {
-				urlKey := models.UrlKey{}.DecodeBytes(urlKeyBytes)
-				if urlKey.Status == models.SubscriptionStatus_SUBSCRIBED || urlKey.Status == models.SubscriptionStatus_RATE_LIMITED {
-					keys[urlKey.Endpoint] = append(keys[urlKey.Endpoint], urlKeyBytes)
-				}
-			}
-			startKey = nextKey
-			if len(urlKeys) < 1000 {
-				break
-			}
-		}
-	}
-
-	notificationId := ""
-	notificationCount := 0
-	for url, urlKeys := range keys {
-		notification := models.NewNotification(
-			notificationId,
-			requestBody.Title,
-			requestBody.Body,
-			requestBody.Url,
-			url,
-			urlKeys,
-		)
-		notificationId = notification.Id
-		notificationCount += len(urlKeys)
-		if err := notification.Send(); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err})
-			return
-		}
-		ver, err = notification.Update()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
-			return
-		}
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"NotificationId":      notificationId,
-		"NotificationVersion": ver,
-		"Count":               notificationCount,
-	})
-}
-
-
-*/
 // DONE
 func H_NotificationsGet(c *gin.Context) {
 	if !validateFrameAccess(c) {
