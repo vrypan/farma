@@ -26,7 +26,9 @@ func cliDbKeys(cmd *cobra.Command, args []string) {
 	key, _ := cmd.Flags().GetString("key")
 	start, _ := cmd.Flags().GetString("start")
 	limit, _ := cmd.Flags().GetInt("limit")
-	path := "/api/v2/dbkeys/"
+	path, _ := cmd.Flags().GetString("path")
+	path += "dbkeys/"
+
 	if len(args) > 0 {
 		path = path + args[0]
 	}

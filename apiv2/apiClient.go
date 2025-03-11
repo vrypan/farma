@@ -42,7 +42,7 @@ func (api ApiClient) Init(
 	if strings.HasPrefix(httpPath, "http") {
 		api.HttpPath = httpPath
 	} else {
-		api.HttpPath = fmt.Sprintf("http://%s%s", config.GetString("host.addr"), httpPath)
+		api.HttpPath = fmt.Sprintf("http://%s/api/v2/%s", config.GetString("host.addr"), httpPath)
 	}
 	api.HttpMethod = httpMethod
 	api.Payload = payload

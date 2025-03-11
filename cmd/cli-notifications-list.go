@@ -9,7 +9,7 @@ import (
 )
 
 var cliNotificationsListCmd = &cobra.Command{
-	Use:   "notifications-list [notificationId]",
+	Use:   "notifications-list [frameId] [notificationId]",
 	Short: "List notifications",
 	Run:   cliNotifications,
 }
@@ -27,9 +27,14 @@ func cliNotifications(cmd *cobra.Command, args []string) {
 	key, _ := cmd.Flags().GetString("key")
 	start, _ := cmd.Flags().GetString("start")
 	limit, _ := cmd.Flags().GetInt("limit")
-	path := "/api/v2/notification/"
-	if len(args) > 0 {
-		path += args[0] + "/"
+
+	path, _ := cmd.Flags().GetString("path")
+	path += "notification/"
+	if len(args) > 2 {
+		cmd.Help()
+	}
+	for _, p := range args {
+		path += p + "/"
 	}
 	a := api.ApiClient{}.Init("GET", path, nil, key, "")
 	next := start

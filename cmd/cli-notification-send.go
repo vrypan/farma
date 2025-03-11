@@ -27,7 +27,8 @@ func cliNotificationSend(cmd *cobra.Command, args []string) {
 	}
 
 	frameId := args[0]
-	path := "/api/v2/notification/" + frameId
+	path, _ := cmd.Flags().GetString("path")
+	path += "notification/" + frameId
 
 	userIdsStr := ""
 	for i := 4; i <= len(args)-1; i++ {

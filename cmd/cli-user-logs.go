@@ -27,12 +27,13 @@ func cliLogs(cmd *cobra.Command, args []string) {
 	key, _ := cmd.Flags().GetString("key")
 	start, _ := cmd.Flags().GetString("start")
 	limit, _ := cmd.Flags().GetInt("limit")
-	path := "/api/v2/logs/"
+	path, _ := cmd.Flags().GetString("path")
+	path += "logs/"
 	if len(args) > 0 {
 		path += args[0] + "/"
 	}
 	if len(args) > 1 {
-		path += "/" + args[1]
+		path += args[1]
 	}
 
 	a := api.ApiClient{}.Init("GET", path, nil, key, "")

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vrypan/farma/config"
@@ -371,7 +372,13 @@ func H_NotificationsGet(c *gin.Context) {
 		return
 	}
 	frameId := c.Param("frameId")
-	notificationId := c.Param("notificationId")[1:]
+	notificationId := c.Param("notificationId")
+	if strings.HasPrefix(notificationId, "/") {
+		notificationId = notificationId[1:]
+	}
+	if strings.HasSuffix(notificationId, "/") {
+		notificationId = notificationId[:len(notificationId)-1]
+	}
 	prefix := "n:id:" + frameId + ":"
 	if notificationId != "" {
 		prefix += notificationId + ":"

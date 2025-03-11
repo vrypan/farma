@@ -26,17 +26,17 @@ func init() {
 func cliFramesList(cmd *cobra.Command, args []string) {
 	start, _ := cmd.Flags().GetString("start")
 	limit, _ := cmd.Flags().GetInt("limit")
-	path, _ := cmd.Flags().GetString("path")
 	key, _ := cmd.Flags().GetString("key")
 
-	if path == "" {
-		path = "/api/v2/frame/"
-	}
 	frameId := ""
 	if len(args) > 0 {
 		frameId = args[0]
 	}
-	a := api.ApiClient{}.Init("GET", path+frameId, nil, key, frameId)
+
+	path, _ := cmd.Flags().GetString("path")
+	path += "frame/" + frameId
+
+	a := api.ApiClient{}.Init("GET", path, nil, key, frameId)
 
 	next := start
 	count := 0

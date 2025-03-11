@@ -38,7 +38,9 @@ func cliFrameUpd(cmd *cobra.Command, args []string) {
 		"domain": "` + domain + `",
 		"public_key": "` + public_key + `"
 		}`
-	a := api.ApiClient{}.Init("POST", "frame/"+frameId, []byte(payload), key, "")
+	path, _ := cmd.Flags().GetString("path")
+	path += "frame/" + frameId
+	a := api.ApiClient{}.Init("POST", path, []byte(payload), key, "")
 	res, err := a.Request("", "")
 	if err != nil {
 		fmt.Printf("Failed to make API call: %v %s\n", err, res)

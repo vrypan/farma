@@ -20,14 +20,15 @@ func init() {
 	cliSubscriptionsCmd.Flags().String("start", "", "Start key")
 	cliSubscriptionsCmd.Flags().Int("limit", 1000, "Max results")
 	cliSubscriptionsCmd.Flags().String("key", "config", "Private key to use")
-
 }
 
 func cliSubscriptions(cmd *cobra.Command, args []string) {
 	key, _ := cmd.Flags().GetString("key")
 	start, _ := cmd.Flags().GetString("start")
 	limit, _ := cmd.Flags().GetInt("limit")
-	path := "/api/v2/subscription/"
+
+	path, _ := cmd.Flags().GetString("path")
+	path += "subscription/"
 	if len(args) > 0 {
 		path += args[0]
 	}

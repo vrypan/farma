@@ -34,7 +34,9 @@ func cliFrameAdd(cmd *cobra.Command, args []string) {
 			"domain": "` + frameDomain + `",
 			"webhook": ""
 	}`
-	a := api.ApiClient{}.Init("POST", "/api/v2/frame/", []byte(payload), key, "")
+	path, _ := cmd.Flags().GetString("path")
+	path += "frame/"
+	a := api.ApiClient{}.Init("POST", path, []byte(payload), key, "")
 	res, err := a.Request("", "")
 	if err != nil {
 		fmt.Printf("Failed to make API call: %v %s\n", err, res)
