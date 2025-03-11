@@ -2,7 +2,6 @@ package apiv2
 
 import (
 	"encoding/base64"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -219,7 +218,6 @@ func H_Notify(c *gin.Context) {
 			}
 		}
 	}
-	fmt.Printf("DEBUG: %v\n", keys)
 	notificationId := ""
 	notificationCount := 0
 	for url, urlKeys := range keys {

@@ -98,7 +98,6 @@ func (f *Frame) FromEndpoint(endpoint string) error {
 		return errors.New("Expected /f/<frameId> path.")
 	}
 	frameId := parts[2]
-	fmt.Println("DEBUG:frameId", frameId)
 	if f.FromId(frameId) == nil {
 		return errors.New("Error fetching frame from db.")
 	}
