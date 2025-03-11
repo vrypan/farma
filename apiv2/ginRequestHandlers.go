@@ -92,17 +92,6 @@ func H_FrameUpdate(c *gin.Context) {
 		return
 	}
 
-	if frame.PublicKey != nil {
-		if err := frame.PublicKey.Delete(); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Failed to delete f:pk: " + err.Error(),
-			})
-			return
-		}
-	}
-
-	// Now update the frame data and save.
-
 	if requestBody.Name != "" {
 		frame.Name = requestBody.Name
 	}
@@ -119,12 +108,6 @@ func H_FrameUpdate(c *gin.Context) {
 		frame.PublicKey = &models.PubKey{
 			FrameId: frame.Id,
 			Key:     publicKeyBytes,
-		}
-		if err := frame.PublicKey.Save(); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Failed to save " + frame.PublicKey.DbKey() + " " + err.Error(),
-			})
-			return
 		}
 	}
 	if err := frame.Save(); err != nil {

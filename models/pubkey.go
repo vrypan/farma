@@ -1,6 +1,7 @@
 package models
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/base64"
@@ -40,12 +41,11 @@ func (k *PubKey) Save() error {
 	return err
 }
 func (k *PubKey) InDb() bool {
-	dbkey := k.DbKeyBytes()
-	_, err := db.Get(dbkey)
-	if err != nil {
-		return false
+	f := NewFrame().FromId(k.FrameId)
+	if f != nil && bytes.Equal(f.PublicKey.Key, k.Key) {
+		return true
 	}
-	return true
+	return false
 }
 func (k *PubKey) Delete() error {
 	return db.Delete(k.DbKeyBytes())

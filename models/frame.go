@@ -77,16 +77,6 @@ func (f *Frame) Save() error {
 	if err = db.Set([]byte(key), data); err != nil {
 		return fmt.Errorf("Error saving Frame: %v\n", err)
 	}
-
-	// In addition to f:id:<id>, we also save
-	// f:pk:<public_key>
-	// This makes it very fast to find a Frame by public_key
-
-	if f.PublicKey != nil {
-		if err = f.PublicKey.Save(); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
