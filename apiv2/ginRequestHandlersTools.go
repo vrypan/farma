@@ -39,8 +39,6 @@ func getData(c *gin.Context, prefix string, model any) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		return
 	}
-
-	//fmt.Printf("GetPrefixP(%s, %s, %d)\n", prefixBytes, startBytes, limit)
 	data, next, err := db.GetPrefixP(prefixBytes, startBytes, limit)
 
 	if err != nil {

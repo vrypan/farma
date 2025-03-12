@@ -207,27 +207,6 @@ func GetPrefixP(prefix []byte, startKey []byte, limit int) (items [][]byte, next
 // lastKey is the next key that is not returned, which can be used
 // in a subsequent call to GetKeysWithPrefix.
 func GetKeysWithPrefix(prefix []byte, startKey []byte, limit int) (items [][]byte, nextKey []byte, err error) {
-	/*
-		To be removed when I feel comfortable with it.
-
-		err = db.View(func(txn *badger.Txn) error {
-		   		it := txn.NewIterator(badger.DefaultIteratorOptions)
-		   		defer it.Close()
-		   		count := 0
-		   		for it.Seek(startKey); it.ValidForPrefix(prefix) && count <= limit; it.Next() {
-		   			item := it.Item()
-		   			k := item.Key()
-		   			nextKey = k
-		   			if count == limit {
-		   				break
-		   			}
-		   			items = append(items, k)
-		   			nextKey = nil
-		   			count++
-		   		}
-		   		return nil
-		   	})
-	*/
 	err = db.View(func(txn *badger.Txn) error {
 		opts := badger.IteratorOptions{
 			PrefetchSize: limit + 1,
@@ -236,7 +215,7 @@ func GetKeysWithPrefix(prefix []byte, startKey []byte, limit int) (items [][]byt
 		defer it.Close()
 		for it.Seek(startKey); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
-			if len(items) > limit {
+			if len(items) == limit {
 				nextKey = item.KeyCopy(nil)
 				break
 			}

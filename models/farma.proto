@@ -56,12 +56,13 @@ message Notification {
     string title = 4;
     string message = 5;
     string link = 6;
-    repeated string tokens = 7;
+    map<string, uint64> tokens = 7;
     repeated string successTokens = 8;
     repeated string failedTokens = 9;
     repeated string rateLimitedTokens = 10;
     google.protobuf.Timestamp ctime = 11;
     optional uint64 version = 12;
+    uint64 appId = 13;
 }
 
 message UserLog {

@@ -60,5 +60,6 @@ func cliDbKeys(cmd *cobra.Command, args []string) {
 		}
 		next = res.Next
 		count += len(res.Result)
+		fmt.Printf("\n\nCount: %d\nNext: %s\n", count, string(next))
 	}
 }

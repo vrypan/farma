@@ -186,8 +186,10 @@ func H_Notify(c *gin.Context) {
 		requestBody.Url = "https://" + frame.Domain
 	}
 
-	keys := make(map[string][]string)
-
+	// [url][token][fid]
+	keys := make(map[string]map[string]uint64)
+	// Map notification URLs to Application Ids
+	appUrls := make(map[string]uint64)
 	if len(requestBody.UserIds) > 0 {
 		// Notify only specific subscribers
 		for _, userId := range requestBody.UserIds {
@@ -198,7 +200,13 @@ func H_Notify(c *gin.Context) {
 			}
 			for _, s := range subscriptions {
 				if s.Status == models.SubscriptionStatus_SUBSCRIBED || s.Status == models.SubscriptionStatus_RATE_LIMITED {
-					keys[s.Url] = append(keys[s.Url], s.Token)
+					if url, exists := keys[s.Url]; exists {
+						url[s.Token] = s.UserId
+					} else {
+						keys[s.Url] = make(map[string]uint64)
+						keys[s.Url][s.Token] = s.UserId
+						appUrls[s.Url] = s.AppId
+					}
 				}
 			}
 		}
@@ -213,7 +221,13 @@ func H_Notify(c *gin.Context) {
 			}
 			for _, s := range subscriptions {
 				if s.Status == models.SubscriptionStatus_SUBSCRIBED || s.Status == models.SubscriptionStatus_RATE_LIMITED {
-					keys[s.Url] = append(keys[s.Url], s.Token)
+					if url, exists := keys[s.Url]; exists {
+						url[s.Token] = s.UserId
+					} else {
+						keys[s.Url] = make(map[string]uint64)
+						keys[s.Url][s.Token] = s.UserId
+						appUrls[s.Url] = s.AppId
+					}
 				}
 			}
 			if len(subscriptions) < 1000 {
@@ -231,12 +245,13 @@ func H_Notify(c *gin.Context) {
 		// clients will have different endpoints.
 		notification := models.NewNotification(
 			requestBody.FrameId,
+			appUrls[url],
 			notificationId,
 			requestBody.Title,
 			requestBody.Body,
 			requestBody.Url,
 			url,
-			tokens,
+			keys[url],
 		)
 		notificationId = notification.Id
 		notificationCount += len(tokens)
@@ -260,9 +275,6 @@ func H_Notify(c *gin.Context) {
 
 // DONE
 func H_NotificationsGet(c *gin.Context) {
-	if !validateFrameAccess(c) {
-		return
-	}
 	if !validateFrameAccess(c) {
 		return
 	}

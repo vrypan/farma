@@ -15,19 +15,20 @@ import (
 
 func NewNotification(
 	frameId string,
+	appId uint64,
 	id string,
 	title string,
 	message string,
 	link string,
 	endpoint string,
-	tokens []string,
+	tokens map[string]uint64,
 ) *Notification {
-
 	if id == "" {
 		id = uuid.New().String()
 	}
 	return &Notification{
 		FrameId:  frameId,
+		AppId:    appId,
 		Id:       id,
 		Endpoint: endpoint,
 		Title:    title,
@@ -43,19 +44,22 @@ func (n *Notification) Send() error {
 		return fmt.Errorf("Error saving notification: %w", err)
 	}
 
+	var tokenKeys []string
+	for k := range n.Tokens {
+		tokenKeys = append(tokenKeys, k)
+	}
 	data := map[string]any{
 		"notificationId": n.Id,
 		"title":          n.Title,
 		"body":           n.Message,
 		"targetUrl":      n.Link,
-		"tokens":         n.Tokens,
+		"tokens":         tokenKeys,
 	}
 
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("Error marshalling json: %w", err)
 	}
-
 	request, err := http.NewRequest("POST", n.Endpoint, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("Error creating new request: %w", err)
@@ -88,25 +92,15 @@ func (n *Notification) Send() error {
 		} `json:"result"`
 	}
 	err = json.Unmarshal(bodyBytes, &responseBody)
-
 	if err != nil {
 		return fmt.Errorf("Error unmarshalling response body: %w", err)
 	}
-
 	n.SuccessTokens = responseBody.Result.SuccessfulTokens
 	n.FailedTokens = responseBody.Result.InvalidTokens
 	n.RateLimitedTokens = responseBody.Result.RateLimitedTokens
 	context := EventContextNotification{Id: n.Id, Version: *n.Version}
 	for _, token := range n.SuccessTokens {
-		tokenKey := NewTokenKey(token)
-		subscriptionKey, err := db.Get(tokenKey.Bytes())
-		if err != nil {
-			return fmt.Errorf("Error getting subscription key for %s: %s", tokenKey, err)
-		}
-		if subscriptionKey == nil {
-			return fmt.Errorf("Subscription key not found for token: %s", token)
-		}
-		subscription := DecodeKey(subscriptionKey)
+		subscription := NewSubscription().FromKey(n.FrameId, n.Tokens[token], n.AppId)
 		l := UserLog{
 			FrameId:    subscription.FrameId,
 			UserId:     subscription.UserId,
@@ -120,15 +114,7 @@ func (n *Notification) Send() error {
 		}
 	}
 	for _, token := range n.FailedTokens {
-		tokenKey := NewTokenKey(token)
-		subscriptionKey, err := db.Get(tokenKey.Bytes())
-		if err != nil {
-			return fmt.Errorf("Error getting subscription key for %s: %s", tokenKey, err)
-		}
-		if subscriptionKey == nil {
-			return fmt.Errorf("Subscription key not found for token: %s", token)
-		}
-		subscription := DecodeKey(subscriptionKey)
+		subscription := NewSubscription().FromKey(n.FrameId, n.Tokens[token], n.AppId)
 		l := UserLog{
 			FrameId:    subscription.FrameId,
 			UserId:     subscription.UserId,
@@ -140,21 +126,12 @@ func (n *Notification) Send() error {
 		if err != nil {
 			fmt.Printf("Error in UserLog.Save(): %v\n", err)
 		}
-		subscription.FromKeyBytes(subscriptionKey)
 		subscription.Status = SubscriptionStatus_UNSUBSCRIBED
 		subscription.Token = ""
 		subscription.Save()
 	}
 	for _, token := range n.RateLimitedTokens {
-		tokenKey := NewTokenKey(token)
-		subscriptionKey, err := db.Get(tokenKey.Bytes())
-		if err != nil {
-			return fmt.Errorf("Error getting subscription key for %s: %s", tokenKey, err)
-		}
-		if subscriptionKey == nil {
-			return fmt.Errorf("Subscription key not found for token: %s", token)
-		}
-		subscription := DecodeKey(subscriptionKey)
+		subscription := NewSubscription().FromKey(n.FrameId, n.Tokens[token], n.AppId)
 		l := UserLog{
 			FrameId:    subscription.FrameId,
 			UserId:     subscription.UserId,
@@ -164,10 +141,10 @@ func (n *Notification) Send() error {
 		}
 		err = l.Save()
 		if err != nil {
-			fmt.Printf("Error in UserLog.Save(): %v\n", err)
+			return fmt.Errorf("Error in UserLog.Save(): %v\n", err)
 		}
-		subscription.FromKeyBytes(subscriptionKey)
 		subscription.Status = SubscriptionStatus_RATE_LIMITED
+		subscription.Token = token
 		subscription.Save()
 	}
 	return nil

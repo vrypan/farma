@@ -54,7 +54,6 @@ func ginServer(cmd *cobra.Command, args []string) {
 	}
 
 	router := gin.Default()
-	//router.Static("/demo", "./cmd/test_frame")
 
 	frameOrAdminGroup := router.Group("/api/v2", apiv2.VerifySignature(apiv2.ACL_FRAME_OR_ADMIN))
 	{
@@ -62,7 +61,8 @@ func ginServer(cmd *cobra.Command, args []string) {
 		frameOrAdminGroup.POST("/frame/:frameId", apiv2.H_FrameUpdate)
 		frameOrAdminGroup.GET("/subscription/*frameId", apiv2.H_SubscriptionsGet)
 		frameOrAdminGroup.GET("/logs/:frameId/*userId", apiv2.H_LogsGet)
-		frameOrAdminGroup.GET("/notification/:frameId/*notificationId", apiv2.H_NotificationsGet)
+		frameOrAdminGroup.GET("/notification/:frameId", apiv2.H_NotificationsGet)
+		frameOrAdminGroup.GET("/notification/:frameId/:notificationId", apiv2.H_NotificationsGet)
 		frameOrAdminGroup.POST("/notification/:frameId", apiv2.H_Notify)
 	}
 	onlyAdminGroup := router.Group("/api/v2", apiv2.VerifySignature(apiv2.ACL_ADMIN))
@@ -79,10 +79,6 @@ func ginServer(cmd *cobra.Command, args []string) {
 		router.Static("/test", testFrame)
 		router.Static("/.well-known", testFrame+"/.well-known")
 	}
-
-	// router.Use(static.Serve("/demo", static.EmbedFolder(staticFiles, "test_frame")))
-	// static.LocalFile("/tmp", false)
-	// router.Use(static.Serve("/demo", static.LocalFile("test_frame", true)))
 
 	server := &http.Server{
 		Addr:    serverAddr,

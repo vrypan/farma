@@ -26,12 +26,13 @@ func TestNotification_Save_Load(t *testing.T) {
 	cleanup(t)
 	n := NewNotification(
 		TESTFRAME,
+		1000,
 		"test-0001",
 		"Test title",
 		"Test message",
 		"https://link.example.com",
 		"https://endpoint.example.com",
-		[]string{},
+		map[string]uint64{},
 	)
 	n.Save()
 	t.Logf("Saved one entry, with Id %s", n.Id)
@@ -73,12 +74,13 @@ func TestNotification_Versions(t *testing.T) {
 	cleanup(t)
 	n := NewNotification(
 		"zzzzz",
+		1000,
 		"test-0002",
 		"Test title",
 		"Test message",
 		"https://link.example.com",
 		"https://endpoint.example.com",
-		[]string{},
+		map[string]uint64{},
 	)
 	v, err := n.Save()
 	if err != nil {

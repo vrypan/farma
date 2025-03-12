@@ -30,11 +30,12 @@ func cliNotifications(cmd *cobra.Command, args []string) {
 
 	path, _ := cmd.Flags().GetString("path")
 	path += "notification/"
-	if len(args) > 2 {
+	if len(args) < 1 {
 		cmd.Help()
 	}
-	for _, p := range args {
-		path += p + "/"
+	path += args[0]
+	if len(args) > 1 {
+		path += "/" + args[1]
 	}
 	a := api.ApiClient{}.Init("GET", path, nil, key, "")
 	next := start

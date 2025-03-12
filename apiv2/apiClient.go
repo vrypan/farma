@@ -71,12 +71,15 @@ func (api ApiClient) Init(
 
 func (api *ApiClient) Request(start string, limit string) ([]byte, error) {
 	requestUrl, _ := url.Parse(api.HttpPath)
+	qParams := requestUrl.Query()
 	if limit != "" {
-		requestUrl.Query().Add("limit", limit)
+		qParams.Add("limit", limit)
 	}
 	if start != "" {
-		requestUrl.Query().Add("start", start)
+		qParams.Add("start", start)
 	}
+	requestUrl.RawQuery = qParams.Encode()
+
 	client := &http.Client{}
 	req, err := http.NewRequest(api.HttpMethod, requestUrl.String(), bytes.NewBuffer(api.Payload))
 	if err != nil {
