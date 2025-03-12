@@ -4,22 +4,29 @@
 
 All calls bellow that indicate Authentication, must provide a `X-Signature` HTTP header.
 
-The public key used to sign the request is expected in the `X-Public-Key` HTTP header. This key
-must be already configured in Farma. Right now, the API does not check `X-Public-Key`, and
-relies in the single key configured during `farma setup`. In the future, when more than one
-keys are supported, `X-Public-Key`will be required.
-
 `X-Signature` is calculated as:
 
 ```
-X-SIGNATURE = ED25519_SIGN(
+X-SIGNATURE = BASE64( ED25519_SIGN(
   PRIVATE_KEY,
   HTTP_METHOD + "\n" + PATH + "\n" + DATE
-)
+))
 ```
 
+The public key used to sign the request is expected in the `X-Public-Key` HTTP header. 
+
+There are two types of key pairs:
+- The admin key can perform all actions and make all API calls. This is the key configured
+  in Farma during setup, and it is stored in `config.yaml`
+- In addition to the admin key pair, each frame has its own private and public key. The frame
+  keypair can only be used to access data and APIs related to the specific frame.
+
+`X-PUBLIC-KEY = FRAME_ID:BASE64(public key)`
+
+If you are using the admin key, set `FRAME_ID` to `0` in the above formula.
+
 Sample code in Javascript can be found in [examples/nodejs/index.js](../examples/nodejs/index.js)
-Check [api/utils.go](../api/utils.go) for an implementation in Go.
+Check [api/utils.go](../api2/apiClient.go) (used by the Farma CLI tools) for an implementation in Go.
 
 ## Endpoints
 
@@ -28,9 +35,9 @@ Check [api/utils.go](../api/utils.go) for an implementation in Go.
 #### Get Frames
 |Item|Description |
 |:--|:--|
-|endpoint| /api/v1/frames/:id|
+|endpoint| /api/v2/frames/:id|
 |method | GET|
-|authentication| required |
+|authentication| frame or admin |
 |GET Parameter| `start`: Used when itterating through paginated results |
 |GET Parameter| `limit`: max number of results to fetch |
 
@@ -41,42 +48,41 @@ Sample response:
 
 ```json
 {
-  "result":[
-    {
-      "id": 1,
-      "name": "example",
-      "domain": "example.com",
-      "webhook": "/f/16c89d6c-4356-4481-accc-18b3a0b49a2b"
-    },
-    {
-      "id": 2,
-      "name": "example2",
-      "domain": "example2.com",
-      "webhook": "/f/8dd2b175-83ba-48ba-9dd0-41453b4f86ef"
-    }
-  ],
-  "next": "bDp1c2VyOjI4MDoyOjE3NDAyNTU5NzgK"
+  "id": "6m4m2",
+  "name": "test-frame",
+  "domain": "test.com",
+  "publicKey": {
+    "frameId": "6m4m2",
+    "Key": "s/qu55n1k+sxO5WZ7iHFVapnTVjp0dNRz54jD+pIbhM="
+  }
 }
 ```
 #### Create Frame
 |Item|Description |
 |:--|:--|
-|endpoint| /api/v1/frames/|
+|endpoint| /api/v2/frames/|
 |method | POST|
-|authentication| required |
-|payload| `{"name": "frame name", "domain": "frame domain", "webhook":""}`|
+|authentication| admin |
+|payload| `{"name": "frame name", "domain": "frame domain"}`|
 
-It will configure a new frame into Farma. It is advised to leave `webhook` empty, unless you know exactly what you are doing.
+It will configure a new frame into Farma.
 
 Sample response:
 
 ```json
-  {
-    "id": 1,
-    "name": "example",
-    "domain": "example.com",
-    "webhook": "/f/16c89d6c-4356-4481-accc-18b3a0b49a2b"
-  },
+{
+ "frame":{
+  "id": "6m4m2",
+  "name": "test-frame",
+  "domain": "test.com",
+  "publicKey": {
+    "frameId": "6m4m2",
+    "Key": "s/qu55n1k+sxO5WZ7iHFVapnTVjp0dNRz54jD+pIbhM="
+  }
+},
+"private_key": "automatically generated private key",
+"public_key": "corresponding public key"
+}
 ```
 
 ### Subscriptions
@@ -84,9 +90,9 @@ Sample response:
 #### Get Subscriptions
 |Item|Description |
 |:--|:--|
-|endpoint| /api/v1/subscriptions/:frameid|
+|endpoint| /api/v2/subscriptions/:frameid|
 |method | GET|
-|authentication| required |
+|authentication| frame or admin |
 |GET Parameter| `start`: Used when itterating through paginated results |
 |GET Parameter| `limit`: max number of results to fetch |
 
@@ -103,7 +109,7 @@ Sample response:
       "userId": 20396,
       "appId": 9152,
       "status": 2,
-      "url": "https://api.warpcast.com/v1/frame-notifications",
+      "url": "https://api.warpcast.com/v2/frame-notifications",
       "token": "01952cfc-cc2f-8b3c-4ed8-a476d9b05050",
       "ctime": {
         "seconds": 1739953526,
@@ -127,9 +133,9 @@ Sample response:
 #### Get Logs
 |Item|Description |
 |:--|:--|
-|endpoint| /api/v1/logs/:userId|
+|endpoint| /api/v2/logs/:frameId/:userId|
 |method | GET|
-|authentication| required |
+|authentication| frame or admin |
 |GET Parameter| `start`: Used when itterating through paginated results |
 |GET Parameter| `limit`: max number of results to fetch |
 
@@ -184,9 +190,9 @@ Sample response:
 #### Send notification
 |Item|Description |
 |:--|:--|
-|endpoint| /api/v1/notifications/|
+|endpoint| /api/v2/notifications/:frameId|
 |method | POST|
-|authentication| required |
+|authentication| frame or admin |
 |payload| `{"frameId": frameId, "title": "notif title", "body": "notif body", "url": "notification link"}`|
 
 It will send a notification to all subscriebrs of frame `frameId`.
