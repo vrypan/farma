@@ -19,10 +19,14 @@ Then create the `/etc/farma` (config files) and `/var/lib/farma` (data files) an
 
 `sudo chown farma:farma /var/lib/farma`
 
-## 2. Run the setup script
+## 2. Setup
+Create the necessary files in `/etc/farma/`:
+
 `sudo -u farma XDG_CONFIG_HOME=/etc/ /usr/local/bin/farma setup`
 
-This will add the necessary files to
+Set the db path in config.yaml:
+`sudo -u farma XDG_CONFIG_HOME=/etc/ /usr/local/bin/farma config set db.path /var/lib/farma/`
+
 
 ## 3. Configure systemd
 
@@ -44,7 +48,7 @@ WorkingDirectory=/tmp
 StandardOutput=append:/var/log/farma.log
 StandardError=append:/var/log/farma.log
 Environment=XDG_CONFIG_HOME=/etc/
-Environment=FARMA_DB_PATH=/var/lib/farma/
+# Environment=FARMA_DB_PATH=/var/lib/farma/
 
 [Install]
 WantedBy=multi-user.target
