@@ -9,14 +9,15 @@ import (
 )
 
 var cliNotificationsListCmd = &cobra.Command{
-	Use:   "notifications-list [frameId] [notificationId]",
-	Short: "List notifications",
+	Use:   "notifications-list frame_id [notification_id]",
+	Short: "List notifications sent",
+	Long:  `List all notifications sent for a given frame_id`,
 	Run:   cliNotifications,
 }
 
 func init() {
 	rootCmd.AddCommand(cliNotificationsListCmd)
-	cliNotificationsListCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v1/frames/ (from config file)")
+	cliNotificationsListCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v2/ (host.addr from config)")
 	cliNotificationsListCmd.Flags().String("start", "", "Start key")
 	cliNotificationsListCmd.Flags().Int("limit", 1000, "Max results")
 	cliNotificationsListCmd.Flags().String("key", "config", "Private key to use")

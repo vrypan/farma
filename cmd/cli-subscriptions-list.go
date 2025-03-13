@@ -9,14 +9,17 @@ import (
 )
 
 var cliSubscriptionsCmd = &cobra.Command{
-	Use:   "subscriptions-list [frameId]",
+	Use:   "subscriptions-list frame_id",
 	Short: "List subscriptions",
-	Run:   cliSubscriptions,
+	Long: `List all subscriptions for frame_id. It will show active and
+inaactive subscriptions (users that disabled notifications or
+removed the frame)`,
+	Run: cliSubscriptions,
 }
 
 func init() {
 	rootCmd.AddCommand(cliSubscriptionsCmd)
-	cliSubscriptionsCmd.Flags().String("path", "", "API endpoint.")
+	cliSubscriptionsCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v2/ (host.addr from config)")
 	cliSubscriptionsCmd.Flags().String("start", "", "Start key")
 	cliSubscriptionsCmd.Flags().Int("limit", 1000, "Max results")
 	cliSubscriptionsCmd.Flags().String("key", "config", "Private key to use")

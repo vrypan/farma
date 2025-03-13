@@ -9,16 +9,14 @@ import (
 )
 
 var cliFramesListCmd = &cobra.Command{
-	Use:   "frames-list [frameId]",
-	Short: "List all frames",
-	Long: `List all frames: ID, Name,Webhook URL, Domain
-This is a wrapper command that uses the farma API.`,
-	Run: cliFramesList,
+	Use:   "frames-list [frame_id]",
+	Short: "List all frame configurations",
+	Run:   cliFramesList,
 }
 
 func init() {
 	rootCmd.AddCommand(cliFramesListCmd)
-	cliFramesListCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v1/frames/ (from config file)")
+	cliFramesListCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v2/ (host.addr from config)")
 	cliFramesListCmd.Flags().String("start", "", "Start key")
 	cliFramesListCmd.Flags().Int("limit", 1000, "Max results")
 	cliFramesListCmd.Flags().String("key", "config", "Private key to use")

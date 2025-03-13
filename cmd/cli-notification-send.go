@@ -8,14 +8,18 @@ import (
 )
 
 var cliNotificationSendCmd = &cobra.Command{
-	Use:   "notification-send [frameId] [title] [body] [url] [userId1] [userId2] ...",
-	Short: "Send notifications",
-	Run:   cliNotificationSend,
+	Use:   "notification-send frame_id title body url [fid1] [fid2] ...",
+	Short: "Send a notification",
+	Long: `Send a notification to frame_id subscribers. Title, Body and Url
+must be specificed. Set Url to "" for the frame's domain.
+If a list of fids is provided, only these users will be notified, provided
+they have active subscriptions.`,
+	Run: cliNotificationSend,
 }
 
 func init() {
 	rootCmd.AddCommand(cliNotificationSendCmd)
-	cliNotificationSendCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v2/frames/ (from config file)")
+	cliNotificationSendCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v2/ (host.addr from config)")
 	cliNotificationSendCmd.Flags().String("key", "config", "Private key to use")
 }
 

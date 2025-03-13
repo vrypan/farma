@@ -10,14 +10,15 @@ import (
 )
 
 var cliFrameAddCmd = &cobra.Command{
-	Use:   "frame-add [name] [domain]",
+	Use:   "frame-add frame_name frame_domain",
 	Short: "Configure a new frame",
+	Long:  `Upon success, it will return the frame's keypair and webhook.`,
 	Run:   cliFrameAdd,
 }
 
 func init() {
 	rootCmd.AddCommand(cliFrameAddCmd)
-	cliFrameAddCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v1/frames/ (from config file)")
+	cliFrameAddCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v2/ (host.addr from config)")
 	cliFrameAddCmd.Flags().String("key", "config", "Private key to use.")
 }
 
@@ -36,6 +37,7 @@ func cliFrameAdd(cmd *cobra.Command, args []string) {
 	}`
 	path, _ := cmd.Flags().GetString("path")
 	path += "frame/"
+
 	a := api.ApiClient{}.Init("POST", path, []byte(payload), key, "")
 	res, err := a.Request("", "")
 	if err != nil {

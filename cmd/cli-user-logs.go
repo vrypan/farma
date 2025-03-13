@@ -9,14 +9,16 @@ import (
 )
 
 var cliLogsCmd = &cobra.Command{
-	Use:   "user-logs [frameId] [userId]",
-	Short: "List all logs",
-	Run:   cliLogs,
+	Use:   "user-logs frame_id [fid]",
+	Short: "User logs",
+	Long: `Detailed user logs for a frame: frame additions/removals,
+notifications enabled/disabled, notifications sent to each user.`,
+	Run: cliLogs,
 }
 
 func init() {
 	rootCmd.AddCommand(cliLogsCmd)
-	cliLogsCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v1/frames/ (from config file)")
+	cliLogsCmd.Flags().String("path", "", "API endpoint. Defaults to host.addr/api/v2/ (host.addr from config)")
 	cliLogsCmd.Flags().String("start", "", "Start key")
 	cliLogsCmd.Flags().Int("limit", 1000, "Max results")
 	cliLogsCmd.Flags().String("key", "config", "Private key to use")

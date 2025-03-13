@@ -9,7 +9,7 @@ import (
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Get the current version",
+	Short: "Get the current binary version",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(config.FARMA_VERSION)
 	},

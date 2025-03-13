@@ -11,7 +11,9 @@ import (
 var cliDbKeysCmd = &cobra.Command{
 	Use:   "dbkeys-list [prefix]",
 	Short: "List database keys",
-	Run:   cliDbKeys,
+	Long: `Mostly used for debugging. It will list all keys stored in the database.
+The optional prefix is used to filter the results.`,
+	Run: cliDbKeys,
 }
 
 func init() {

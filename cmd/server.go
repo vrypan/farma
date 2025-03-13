@@ -21,7 +21,7 @@ var StaticFiles embed.FS
 
 var ginServerCmd = &cobra.Command{
 	Use:   "server",
-	Short: "",
+	Short: "Start the farma server.",
 	Run:   ginServer,
 }
 

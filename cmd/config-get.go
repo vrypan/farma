@@ -14,7 +14,7 @@ var configgetCmd = &cobra.Command{
 	Long: `Examples:
 farma config get hub.host
 
-"farma congig get" without parameters will return the path
+"farma config get" without parameters will return the path
 of the configuration file.`,
 	Run: config_get,
 }

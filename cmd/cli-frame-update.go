@@ -8,8 +8,8 @@ import (
 )
 
 var cliFrameUpdCmd = &cobra.Command{
-	Use:   "frame-update [frameId]",
-	Short: "Update a frame",
+	Use:   "frame-update frame_id",
+	Short: "Update frame configuration",
 	Run:   cliFrameUpd,
 }
 

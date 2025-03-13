@@ -8,7 +8,7 @@ import (
 )
 
 var configsetCmd = &cobra.Command{
-	Use:   "set [parameter] [value]",
+	Use:   "set parameter value",
 	Short: "Set a config parameter",
 	Long: `Examples:
 farma config set hub.host 192.168.1.1

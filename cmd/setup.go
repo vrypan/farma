@@ -16,7 +16,11 @@ import (
 var setupCmd = &cobra.Command{
 	Use:   "setup",
 	Short: "Initialize and setup farma",
-	Run:   setupFidr,
+	Long: `Setup will create a new config file and an admin keypair.
+By default, the config directory is ~/.farma/, but
+XDG_CONFIG_HOME is honored if set. After the setup,
+you can use "farma config" to get/set values.`,
+	Run: setupFidr,
 }
 
 func init() {
