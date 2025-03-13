@@ -191,7 +191,7 @@ func GetPrefixP(prefix []byte, startKey []byte, limit int) (items [][]byte, next
 			if e != nil {
 				return e
 			}
-			if len(items) > limit {
+			if len(items) == limit {
 				nextKey = item.KeyCopy(nil)
 				break
 			}
