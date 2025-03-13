@@ -2,7 +2,7 @@
 
 ## Authentication
 
-All calls bellow that indicate Authentication, must provide a `X-Signature` HTTP header.
+All calls bellow that indicate Authentication, **must provide the `X-Signature` and `X-Public-Key` HTTP headers**.
 
 `X-Signature` is calculated as:
 
@@ -13,7 +13,7 @@ X-SIGNATURE = BASE64( ED25519_SIGN(
 ))
 ```
 
-The public key used to sign the request is expected in the `X-Public-Key` HTTP header. 
+The public key used to sign the request is expected in the `X-Public-Key` HTTP header.
 
 There are two types of key pairs:
 - The admin key can perform all actions and make all API calls. This is the key configured
