@@ -122,7 +122,15 @@ func H_SubscriptionsGet(c *gin.Context) {
 		return
 	}
 	frameId := c.Param("frameId")[1:]
-	prefix := "s:id:" + frameId + ":"
+	var prefix string
+
+	if acl, ok := c.Get("ACL"); ok && acl == ACL_ADMIN && frameId == "" {
+		// allow admins to query all subscriptions, regardless of frame
+		prefix = "s:id:"
+	} else {
+		prefix = "s:id:" + frameId + ":"
+	}
+
 	getData(c, prefix, &models.Subscription{})
 }
 
