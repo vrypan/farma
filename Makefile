@@ -1,4 +1,4 @@
-HUBBLE_VER := "1.18.0"
+HUBBLE_VER := "1.19.1"
 FARMA_VER := $(shell git describe --tags 2>/dev/null || echo "v0.0.0")
 
 all:
