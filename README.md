@@ -46,7 +46,7 @@ You will need a short name for your frame, and the frame domain.
 If you want to call your frame `myframe`, and its domain is `farma.vrypan.net`, you have to run:
 `farma frame-add myframe farma.vrypan.net`
 
-## 5. Update .well-knows/farcaster.json
+## 5. Update .well-knowν/farcaster.json
 The previous command returned a relative endpoint, something like `/f/a2b01541-778d-4a2b-9375-8232c70a6ddf`.
 
 Hint: You can use `farma frames-list` to get all frames and endpoints configured:
