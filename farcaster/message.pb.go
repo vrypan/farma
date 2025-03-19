@@ -265,7 +265,7 @@ const (
 	UserDataType_USER_DATA_TYPE_URL      UserDataType = 5 // URL of the user
 	UserDataType_USER_DATA_TYPE_USERNAME UserDataType = 6 // Preferred Name for the user
 	UserDataType_USER_DATA_TYPE_LOCATION UserDataType = 7 // Current location for the user
-	UserDataType_USER_DATA_TYPE_TWITTER  UserDataType = 8 // Username of user on twitter
+	UserDataType_USER_DATA_TYPE_TWITTER  UserDataType = 8 // Username of user on x
 	UserDataType_USER_DATA_TYPE_GITHUB   UserDataType = 9 // Username of user on github
 )
 
