@@ -86,7 +86,7 @@ func (api *ApiClient) Request(start string, limit string) ([]byte, error) {
 		return nil, fmt.Errorf("Error creating request: %v", err)
 	}
 	date := time.Now().UTC().Format(time.RFC1123)
-	req.Header.Set("Date", date)
+	req.Header.Set("X-Date", date)
 
 	if api.PrivateKey != nil {
 		signature := ed25519.Sign(api.PrivateKey,

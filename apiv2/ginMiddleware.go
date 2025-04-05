@@ -22,7 +22,7 @@ const (
 
 func verify(c *gin.Context, pubKey *models.PubKey) (isValid bool) {
 	reqMethod, reqPath := c.Request.Method, c.Request.URL.Path
-	date, signature := c.GetHeader("Date"), c.GetHeader("X-Signature")
+	date, signature := c.GetHeader("X-Date"), c.GetHeader("X-Signature")
 
 	if edPubKey := ed25519.PublicKey(pubKey.Key); edPubKey != nil {
 		procTime, _ := time.Parse(time.RFC1123, date)

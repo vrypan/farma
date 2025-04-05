@@ -57,6 +57,15 @@ func ginServer(cmd *cobra.Command, args []string) {
 
 	router := gin.Default()
 
+	allowedHosts := config.GetStringSlice("host.cors")
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     allowedHosts,
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Signature", "X-Public-Key", "X-Date"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
+
 	frameOrAdminGroup := router.Group("/api/v2", apiv2.VerifySignature(apiv2.ACL_FRAME_OR_ADMIN))
 	{
 		frameOrAdminGroup.GET("/frame/:frameId", apiv2.H_FramesGet)
@@ -82,14 +91,6 @@ func ginServer(cmd *cobra.Command, args []string) {
 		router.Static("/.well-known", testFrame+"/.well-known")
 	}
 
-	allowedHosts := config.GetStringSlice("host.cors")
-	router.Use(cors.New(cors.Config{
-		AllowOrigins:     allowedHosts,
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Signature", "X-Public-Key"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-	}))
 	server := &http.Server{
 		Addr:    serverAddr,
 		Handler: router,
