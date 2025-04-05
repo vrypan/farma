@@ -28,7 +28,7 @@ clean:
 .PHONY: all proto clean local release-notes tag tag-minor tag-major releases
 
 farma: .farcaster-built $(SOURCES)
-	@echo -e "$(GREEN)Building fcp ${FCP_VER} $(NC)"
+	@echo -e "$(GREEN)Building farma ${FARMA_VER} $(NC)"
 	go build -o $@ -ldflags "-w -s -X github.com/vrypan/farma/config.FARMA_VERSION=${FARMA_VER}"
 
 release-notes:
