@@ -61,8 +61,9 @@ func Load() string { // Load config and return config file path
 }
 
 var (
-	GetString = viper.GetString
-	GetInt    = viper.GetInt
-	GetBool   = viper.GetBool
-	BindPFlag = viper.BindPFlag
+	GetString      = viper.GetString
+	GetInt         = viper.GetInt
+	GetBool        = viper.GetBool
+	BindPFlag      = viper.BindPFlag
+	GetStringSlice = viper.GetStringSlice
 )

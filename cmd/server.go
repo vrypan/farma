@@ -8,12 +8,14 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 
 	apiv2 "github.com/vrypan/farma/apiv2"
 	"github.com/vrypan/farma/config"
 	"github.com/vrypan/farma/fctools"
+
 	db "github.com/vrypan/farma/localdb"
 )
 
@@ -80,6 +82,14 @@ func ginServer(cmd *cobra.Command, args []string) {
 		router.Static("/.well-known", testFrame+"/.well-known")
 	}
 
+	allowedHosts := config.GetStringSlice("host.cors")
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     allowedHosts,
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Signature", "X-Public-Key"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
 	server := &http.Server{
 		Addr:    serverAddr,
 		Handler: router,
