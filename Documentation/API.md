@@ -81,7 +81,7 @@ Sample response:
   }
 },
 "private_key": "automatically generated private key",
-"public_key": "corresponding public key"
+"public_key": "X-Public-Key header to be used in future requests"
 }
 ```
 
