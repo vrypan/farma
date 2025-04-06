@@ -84,6 +84,7 @@ func ginServer(cmd *cobra.Command, args []string) {
 
 	}
 	router.GET("/api/v2/version", apiv2.H_Version)
+	router.GET("/api/v2/new_keypair/:frameId", apiv2.H_NewKeypair)
 	router.POST("/f/:id", apiv2.WebhookHandler(hub))
 
 	if testFrame != "" {
