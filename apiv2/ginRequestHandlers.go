@@ -71,7 +71,7 @@ func H_FrameUpdate(c *gin.Context) {
 	if !validateFrameAccess(c) {
 		return
 	}
-	frameId := c.Param("id")
+	frameId := c.Param("frameId")
 
 	var requestBody struct {
 		Name      string `json:"name"`
@@ -313,6 +313,21 @@ func H_DbKeysGet(c *gin.Context) {
 func H_Version(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"version": config.FARMA_VERSION,
+	})
+}
+
+func H_NewKeypair(c *gin.Context) {
+	frameId := c.Param("frameId")
+	k := models.PubKey{}
+	privKey, err := k.GenerateKey(frameId)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+	encodedPrivKey := base64.StdEncoding.EncodeToString([]byte(privKey))
+	c.JSON(http.StatusCreated, gin.H{
+		"private_key": encodedPrivKey,
+		"public_key":  k.Encode(),
 	})
 }
 
