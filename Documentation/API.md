@@ -2,7 +2,9 @@
 
 ## Authentication
 
-All calls bellow that indicate Authentication, **must provide the `X-Signature` and `X-Public-Key` HTTP headers**.
+Each frame has its own public/private keypair.
+
+All calls that indicate Authentication, **must provide the `X-Signature` and `X-Public-Key` HTTP headers**.
 
 `X-Signature` is calculated as:
 
@@ -13,17 +15,15 @@ X-SIGNATURE = BASE64( ED25519_SIGN(
 ))
 ```
 
-The public key used to sign the request is expected in the `X-Public-Key` HTTP header.
+And `X-Public-Key` is:
 
-There are two types of key pairs:
-- The admin key can perform all actions and make all API calls. This is the key configured
-  in Farma during setup, and it is stored in `config.yaml`
-- In addition to the admin key pair, each frame has its own private and public key. The frame
-  keypair can only be used to access data and APIs related to the specific frame.
+```
+X-PUBLIC-KEY = FRAME_ID:BASE64(public key)
+```
 
-`X-PUBLIC-KEY = FRAME_ID:BASE64(public key)`
+If you want to use the admin keypair, and not the frame keypair, set `FRAME_ID` to 0.
 
-If you are using the admin key, set `FRAME_ID` to `0` in the above formula.
+The admin key is the key configured in Farma during setup, and it is stored in `config.yaml`
 
 Sample code in Javascript can be found in [examples/nodejs/index.js](../examples/nodejs/index.js)
 Check [api/utils.go](../api2/apiClient.go) (used by the Farma CLI tools) for an implementation in Go.
@@ -32,10 +32,10 @@ Check [api/utils.go](../api2/apiClient.go) (used by the Farma CLI tools) for an 
 
 ### Frames
 
-#### Get Frames
+#### Get Frame
 |Item|Description |
 |:--|:--|
-|endpoint| /api/v2/frames/:id|
+|endpoint| /api/v2/frame/:frameId|
 |method | GET|
 |authentication| frame or admin |
 |GET Parameter| `start`: Used when itterating through paginated results |
@@ -60,7 +60,7 @@ Sample response:
 #### Create Frame
 |Item|Description |
 |:--|:--|
-|endpoint| /api/v2/frames/|
+|endpoint| /api/v2/frame/|
 |method | POST|
 |authentication| admin |
 |payload| `{"name": "frame name", "domain": "frame domain"}`|
@@ -90,7 +90,7 @@ Sample response:
 #### Get Subscriptions
 |Item|Description |
 |:--|:--|
-|endpoint| /api/v2/subscriptions/:frameid|
+|endpoint| /api/v2/subscription/:frameid|
 |method | GET|
 |authentication| frame or admin |
 |GET Parameter| `start`: Used when itterating through paginated results |
@@ -190,7 +190,7 @@ Sample response:
 #### Send notification
 |Item|Description |
 |:--|:--|
-|endpoint| /api/v2/notifications/:frameId|
+|endpoint| /api/v2/notification/:frameId|
 |method | POST|
 |authentication| frame or admin |
 |payload| `{"frameId": frameId, "title": "notif title", "body": "notif body", "url": "notification link"}`|
