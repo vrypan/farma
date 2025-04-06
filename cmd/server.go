@@ -8,12 +8,14 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 
 	apiv2 "github.com/vrypan/farma/apiv2"
 	"github.com/vrypan/farma/config"
 	"github.com/vrypan/farma/fctools"
+
 	db "github.com/vrypan/farma/localdb"
 )
 
@@ -55,6 +57,15 @@ func ginServer(cmd *cobra.Command, args []string) {
 
 	router := gin.Default()
 
+	allowedHosts := config.GetStringSlice("host.cors")
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     allowedHosts,
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Signature", "X-Public-Key", "X-Date"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
+
 	frameOrAdminGroup := router.Group("/api/v2", apiv2.VerifySignature(apiv2.ACL_FRAME_OR_ADMIN))
 	{
 		frameOrAdminGroup.GET("/frame/:frameId", apiv2.H_FramesGet)
@@ -73,6 +84,7 @@ func ginServer(cmd *cobra.Command, args []string) {
 
 	}
 	router.GET("/api/v2/version", apiv2.H_Version)
+	router.GET("/api/v2/new_keypair/:frameId", apiv2.H_NewKeypair)
 	router.POST("/f/:id", apiv2.WebhookHandler(hub))
 
 	if testFrame != "" {

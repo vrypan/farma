@@ -25,7 +25,6 @@ const options = {
   method: "GET",
   headers: {
     "Content-Type": "application/json",
-    Date: date,
   },
 };
 
@@ -35,6 +34,7 @@ const signature = ed25519.sign(message, keyBytes);
 const signature64 = Base64.fromUint8Array(signature);
 options.headers["X-Signature"] = signature64;
 options.headers["X-Public-Key"] = frame_id + ":" + pubKey64;
+options.headers["X-Date"] = date;
 
 const req = http.request(options, (res) => {
   let data = "";
