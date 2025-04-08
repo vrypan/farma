@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Farma</title>
+        <meta name="description" content="Farcaster Relationships Management" />
+
+        <!-- Open Graph / Facebook -->
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://vrypan.github.io/farma" />
+        <meta property="og:title" content="Farma" />
+        <meta property="og:description" content="Farcaster Relationships Management" />
+        <meta property="og:image" content="https://vrypan.github.io/farma/og-image.png" />
+
+        <!-- Twitter -->
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content="https://vrypan.github.io/farma" />
+        <meta property="twitter:title" content="Farma" />
+        <meta property="twitter:description" content="Farcaster Relationships Management" />
+        <meta property="twitter:image" content="https://vrypan.github.io/farma/og-image.png" />
+
+        <!-- Farcaster Frame -->
+        <meta
+            property="fc:frame"
+            content='{"version":"next","imageUrl":"https://vrypan.github.io/farma/og-image.png","button":{"title":"View Repository","action":{"type":"launch_frame","url":"https://vrypan.github.io/farma","name":"Farma","splashImageUrl":"https://vrypan.github.io/farma/splash-image.png","splashBackgroundColor":"#ffffff"}}}'
+        />
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <h1 id="add-this-frame-to-receive-notifications-about-farma-updates-and-versions"><a href="https://warpcast.com/~/frames/launch?domain=farma.vrypan.net">Add this frame</a> to receive notifications about farma updates and versions.</h1>
+<p><img alt="farma-git-social" src="https://raw.githubusercontent.com/vrypan/farma/main/farma-git-social.png" /></p>
+<h1 id="farma">farma</h1>
+<p><strong>farma</strong> (<strong>FA</strong>rcaster <strong>R</strong>elationships <strong>MA</strong>nagement) is built to make Farcaster Frames v2<br />
+notifications easy, and help you get insights on how users interact with your<br />
+frames notifications.</p>
+<ul>
+<li>When did a user first add your frame?</li>
+<li>How many notifications have you sent them since?</li>
+<li>When did they enable/disable notifications</li>
+<li>Which Farcaster clients are they using to interact with your frame?</li>
+</ul>
+<h1 id="features">Features</h1>
+<ul>
+<li>Small footprint, fast, no external dependencies (but you will need access to a read hub).</li>
+<li>Supports multiple frames.</li>
+<li>Supports multiple Farcaster apps.</li>
+<li>Keeps track of subscription activity per user (frame added/removed, notifications enabled/disabled, notifications sent).</li>
+<li>Updates user subscription status based on notification replies from the app (success, rate limited, invalid tokens).</li>
+<li>Allows batch sending notifications to all users subscribed to a frame.</li>
+</ul>
+<h1 id="quick-start">Quick Start</h1>
+<p>(This will improve a lot, but in case someone wants to give it an early try.)</p>
+<h2 id="1-download-binary">1. Download binary</h2>
+<p>Download the binary corresponding to your system from <code>https://github.com/vrypan/farma/releases</code>.<br />
+If you&rsquo;re using macOS, use <code>brew install vrypan/farma/farma</code></p>
+<h2 id="2-setup">2. Setup</h2>
+<p>Run <code>farma setup</code>.</p>
+<p>Make sure you save the private key. The key is used to sign API requests,<br />
+and you will need it even if you are using the CLI commands (they actually use the API<br />
+under the hood)</p>
+<h2 id="3-start-the-server">3. Start the server</h2>
+<p>Start the farma server: <code>farma server</code></p>
+<h2 id="4-configure-a-frame">4. Configure a frame</h2>
+<p>Assuming you already have your frame, you need to configure it in farma.<br />
+You will need a short name for your frame, and the frame domain.</p>
+<p>If you want to call your frame <code>myframe</code>, and its domain is <code>farma.vrypan.net</code>, you have to run:<br />
+<code>farma frame-add myframe farma.vrypan.net</code></p>
+<h2 id="5-update-well-knowfarcasterjson">5. Update .well-knowν/farcaster.json</h2>
+<p>The previous command returned a relative endpoint, something like <code>/f/a2b01541-778d-4a2b-9375-8232c70a6ddf</code>.</p>
+<p>Hint: You can use <code>farma frames-list</code> to get all frames and endpoints configured:</p>
+<p>Add the endpoint (including your server name) in the frame&rsquo;s <code>.well-known/farcaster.json</code> callbackUrl.</p>
+<p>For example,</p>
+<div class="codehilite"><pre><span></span><code>&quot;webhookUrl&quot;: &quot;https://my-frame-notifications.com/f/a2b01541-778d-4a2b-9375-8232c70a6ddf&quot;
+</code></pre></div>
+
+<p><strong>Make sure you re-validate the frame in Warpcast dev tools.</strong></p>
+<h2 id="6-send-notifications">6. Send notifications!</h2>
+<p>You can send a notification to all users subscribed to a frame:</p>
+<div class="codehilite"><pre><span></span><code><span class="nv">farma</span><span class="w"> </span><span class="nv">notification</span><span class="o">-</span><span class="k">send</span><span class="w"> </span><span class="s2">&quot;myframe&quot;</span><span class="w"> </span><span class="s2">&quot;Hello&quot;</span><span class="w"> </span><span class="s2">&quot;Hello, there!&quot;</span><span class="w"> </span><span class="s2">&quot;&quot;</span>
+</code></pre></div>
+
+<h1 id="run-as-a-service">Run as a service</h1>
+<p>If you want to configure farma as a systemd service, see <a href="Documentation/systemd.md">Documentation/systemd.md</a>.</p>
+<h1 id="api">API</h1>
+<p>farma provides a REST API to let you use it from your own applications.</p>
+<p>See: <a href="Documentation/API.md">Documentation/API.md</a></p>
+
+        <a
+            href="https://github.com/vrypan/farma"
+            class="github-button"
+            target="_blank"
+            rel="noopener noreferrer"
+            ><svg
+                height="32"
+                aria-hidden="true"
+                viewBox="0 0 16 16"
+                version="1.1"
+                width="32"
+            >
+                <path
+                    fill-rule="evenodd"
+                    d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59
+                 .4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49
+                 -2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
+                 -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82
+                 .72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07
+                 -1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15
+                 -.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82
+                 .64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04
+                 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82
+                 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73
+                 .54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013
+                 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"
+                ></path>
+            </svg>
+            View on GitHub
+        </a>
+        <!-- Farcaster Frame SDK -->
+        <script type="module">
+            import { sdk } from "https://esm.sh/@farcaster/frame-sdk";
+
+            // Call ready when the page is loaded
+            async function rewriteLinks() {
+                const links = document.querySelectorAll("a[href^='http']");
+                for (let link of links) {
+                    link.addEventListener("click", (event) => {
+                        event.preventDefault();
+                        sdk.actions.openUrl(link.getAttribute("href"));
+                    });
+                }
+            }
+            window.addEventListener("load", async () => {
+                try {
+                    await sdk.actions.ready();
+                    console.log("Frame is ready");
+                    const ctx = await sdk.context;
+                    ctx ? await rewriteLinks() : null;
+                } catch (e) {
+                    console.error("Failed to initialize frame:", e);
+                }
+            });
+        </script>
+    </body>
+</html>
