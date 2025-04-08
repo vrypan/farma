@@ -29,4 +29,4 @@ jobs:
           style: light  # light/dark/custom
           # Optionally set cname or branch_name if you want:
           # cname: yourdomain.com
-          # branch_name: gh-frame
+          branch_name: gh-frame
