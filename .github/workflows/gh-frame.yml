@@ -28,5 +28,5 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}  # Default GitHub token
           style: light  # light/dark/custom
           # Optionally set cname or branch_name if you want:
-          # cname: yourdomain.com
+          cname: farma.vrypan.net
           branch_name: gh-frame
