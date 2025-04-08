@@ -1,0 +1,18 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjI4MCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweGQwNUQ2MGI1NzYyNzI4NDY2QjQzZGQ5NGJBODgyRDA1MGI2MEFGNjcifQ",
+    "payload": "eyJkb21haW4iOiJmYXJtYS52cnlwYW4ubmV0In0",
+    "signature": "MHg5YzlmY2EyODMwM2MxMWY3ZWYzNzE5N2Q1ZDhjNWMwYzQxNDNkYzQ1OTgxNzlmNWNmMjU1YTg3ZWNiNjc4OGE1NmVlYzBiNTMzNjQwMGQxNTgzM2Y5YzEyOTQ0ZTE1ZGFmMmE0NTYyMDZhOGM1NWQ5ZjBiNmEzMTUxMjc3ZTc4MTFj"
+  },
+  "frame": {
+    "version": "1",
+    "name": "farma",
+    "iconUrl": "https://farma.vrypan.net/app.png",
+    "homeUrl": "https://farma.vrypan.net",
+    "imageUrl": "https://farma.vrypan.net/og.png",
+    "buttonTitle": "Learn more",
+    "splashImageUrl": "https://farma.vrypan.net/logo.png",
+    "splashBackgroundColor": "#012100",
+    "webhookUrl": "https://srv1.snowshoe-pirate.ts.net/f/z0002"
+  }
+}
