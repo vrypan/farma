@@ -59,8 +59,6 @@
     </head>
 
     <body>
-        <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk/dist/index.min.js"></script>
-        <script src="./frame.js"></script>
         <container>
             <p>
                 This is a test frame. I use it to test
@@ -81,4 +79,27 @@
             <img src="farma-git-social.png" />
         </container>
     </body>
+<script type="module">
+    import { sdk } from 'https://esm.sh/@farcaster/frame-sdk';
+    async function inFrameContext() {
+        const links = document.querySelectorAll("a[href^='http']");
+        for (let link of links) {
+            link.addEventListener("click", (event) => {
+                event.preventDefault();
+                sdk.actions.openUrl(link.getAttribute("href"));
+            });
+        }
+        await sdk.actions.addFrame();
+    }
+
+    window.onload = async () => {
+      try {
+        await sdk.actions.ready();
+        const ctx = await sdk.context;
+        ctx ? await inFrameContext() : FrameBar();
+      } catch (error) {
+        console.error(error);
+      }
+    };
+</script>
 </html>
