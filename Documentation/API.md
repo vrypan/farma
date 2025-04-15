@@ -1,32 +1,34 @@
 # API
 
+A nodejs SDK is available in [examples/nodejs](../examples/nodejs).
+
+If you are using Go, check `apiv2/apiClient.go`
+
 ## Authentication
 
-Each frame has its own public/private keypair.
+Each frame has its own public/private keypair. There are two types of authentication:
 
-All calls that indicate Authentication, **must provide the `X-Signature` and `X-Public-Key` HTTP headers**.
+1. **Admin Authentication**: Uses the admin keypair configured in Farma during setup (stored in `config.yaml`)
+2. **Frame Authentication**: Uses the frame's own keypair
 
-`X-Signature` is calculated as:
+All authenticated requests must provide the following HTTP headers:
 
-```
-X-SIGNATURE = BASE64( ED25519_SIGN(
-  PRIVATE_KEY,
-  HTTP_METHOD + "\n" + PATH + "\n" + DATE
-))
-```
+| Header | Description |
+|--------|-------------|
+| `X-Signature` | Base64 encoded Ed25519 signature of `METHOD\nPATH\nDATE` |
+| `X-Public-Key` | Format: `FRAME_ID:BASE64(public_key)`. Use `0` as FRAME_ID for admin key |
+| `X-Date` | Current date in RFC1123 format (must be within 10 seconds of server time) |
 
-And `X-Public-Key` is:
+The signature is verified using Ed25519. For frame authentication, the public key must exist in the database.
 
-```
-X-PUBLIC-KEY = FRAME_ID:BASE64(public key)
-```
+## Access Control
 
-If you want to use the admin keypair, and not the frame keypair, set `FRAME_ID` to 0.
+Each endpoint has an Access Control Level (ACL):
 
-The admin key is the key configured in Farma during setup, and it is stored in `config.yaml`
+1. `ACL_ADMIN`: Only admin key is allowed
+2. `ACL_FRAME_OR_ADMIN`: Both frame key and admin key are allowed
 
-Sample code in Javascript can be found in [examples/nodejs/index.js](../examples/nodejs/index.js)
-Check [api/utils.go](../api2/apiClient.go) (used by the Farma CLI tools) for an implementation in Go.
+When using frame authentication, the `frameId` in the request must match the frame ID in the public key.
 
 ## Endpoints
 
@@ -35,14 +37,13 @@ Check [api/utils.go](../api2/apiClient.go) (used by the Farma CLI tools) for an 
 #### Get Frame
 |Item|Description |
 |:--|:--|
-|endpoint| /api/v2/frame/:frameId|
+|endpoint| `/api/v2/frame/:frameId`|
 |method | GET|
-|authentication| frame or admin |
-|GET Parameter| `start`: Used when itterating through paginated results |
+|authentication| `ACL_FRAME_OR_ADMIN` |
+|GET Parameter| `start`: Used when iterating through paginated results |
 |GET Parameter| `limit`: max number of results to fetch |
 
-Returns a JSON object with information about the configured frames. If `id`
-is ommited, it will return all frames.
+Returns a JSON object with information about the configured frames. If `frameId` is omitted, it will return all frames.
 
 Sample response:
 
@@ -57,55 +58,65 @@ Sample response:
   }
 }
 ```
+
 #### Create Frame
 |Item|Description |
 |:--|:--|
-|endpoint| /api/v2/frame/|
+|endpoint| `/api/v2/frame/`|
 |method | POST|
-|authentication| admin |
+|authentication| `ACL_ADMIN` |
 |payload| `{"name": "frame name", "domain": "frame domain"}`|
 
-It will configure a new frame into Farma.
+Creates a new frame and generates a new keypair.
 
 Sample response:
 
 ```json
 {
- "frame":{
-  "id": "6m4m2",
-  "name": "test-frame",
-  "domain": "test.com",
-  "publicKey": {
-    "frameId": "6m4m2",
-    "Key": "s/qu55n1k+sxO5WZ7iHFVapnTVjp0dNRz54jD+pIbhM="
-  }
-},
-"private_key": "automatically generated private key",
-"public_key": "X-Public-Key header to be used in future requests"
+  "frame": {
+    "id": "6m4m2",
+    "name": "test-frame",
+    "domain": "test.com",
+    "publicKey": {
+      "frameId": "6m4m2",
+      "Key": "s/qu55n1k+sxO5WZ7iHFVapnTVjp0dNRz54jD+pIbhM="
+    }
+  },
+  "private_key": "automatically generated private key",
+  "public_key": "X-Public-Key header to be used in future requests"
 }
 ```
+
+#### Update Frame
+|Item|Description |
+|:--|:--|
+|endpoint| `/api/v2/frame/:frameId`|
+|method | POST|
+|authentication| `ACL_FRAME_OR_ADMIN` |
+|payload| `{"name": "new name", "domain": "new domain", "public_key": "new public key"}`|
+
+Updates an existing frame's properties. All fields are optional.
 
 ### Subscriptions
 
 #### Get Subscriptions
 |Item|Description |
 |:--|:--|
-|endpoint| /api/v2/subscription/:frameid|
+|endpoint| `/api/v2/subscription/:frameId`|
 |method | GET|
-|authentication| frame or admin |
-|GET Parameter| `start`: Used when itterating through paginated results |
+|authentication| `ACL_FRAME_OR_ADMIN` |
+|GET Parameter| `start`: Used when iterating through paginated results |
 |GET Parameter| `limit`: max number of results to fetch |
 
-This endpoint will return a list of subscriptions. If `frameId` is provided
-it will return only subscriptions for that frame.
+Returns a list of subscriptions. If `frameId` is provided, it returns only subscriptions for that frame.
 
 Sample response:
 
 ```json
 {
-  "result":[
+  "result": [
     {
-      "frameId": 1,
+      "frameId": "6m4m2",
       "userId": 20396,
       "appId": 9152,
       "status": 2,
@@ -121,8 +132,75 @@ Sample response:
       },
       "verified": true,
       "appKey": "aaNtJNyy5/aE0aWssFSjq1EuP6ZU9bHcE53LLxmAEM0="
-    },
-  ...
+    }
+  ],
+  "next": "bDp1c2VyOjI4MDoyOjE3NDAyNTU5NzgK"
+}
+```
+
+### Notifications
+
+#### Send Notification
+|Item|Description |
+|:--|:--|
+|endpoint| `/api/v2/notification/:frameId`|
+|method | POST|
+|authentication| `ACL_FRAME_OR_ADMIN` |
+|payload| `{"frameId": "frameId", "title": "notif title", "body": "notif body", "url": "notification link", "userIds": [123, 456]}`|
+
+Sends a notification to subscribers of frame `frameId`:
+- If `userIds` is provided, sends only to those users
+- Otherwise sends to all subscribers
+- `url` must be under the frame domain
+- If `url` is empty, links to the frame itself
+
+Sample response:
+
+```json
+{
+  "NotificationId": "12345678-4356-4481-accc-18b3a0b49a2b",
+  "NotificationVersion": 1,
+  "Count": 3
+}
+```
+
+#### Get Notifications
+|Item|Description |
+|:--|:--|
+|endpoint| `/api/v2/notification/:frameId/:notificationId`|
+|method | GET|
+|authentication| `ACL_FRAME_OR_ADMIN` |
+|GET Parameter| `start`: Used when iterating through paginated results |
+|GET Parameter| `limit`: max number of results to fetch |
+
+Returns notifications for a frame, optionally filtered by notificationId. Each notification includes its version history.
+
+Sample response:
+
+```json
+{
+  "result": [
+    {
+      "frameId": "6m4m2",
+      "appId": 9152,
+      "id": "12345678-4356-4481-accc-18b3a0b49a2b",
+      "endpoint": "https://api.warpcast.com/v2/frame-notifications",
+      "title": "Test Notification",
+      "message": "This is a test notification",
+      "link": "https://test.com/frame",
+      "tokens": {
+        "token1": 123,
+        "token2": 456
+      },
+      "successTokens": ["token1"],
+      "failedTokens": ["token2"],
+      "rateLimitedTokens": [],
+      "version": 1,
+      "ctime": {
+        "seconds": 1739953487,
+        "nanos": 955840000
+      }
+    }
   ],
   "next": "bDp1c2VyOjI4MDoyOjE3NDAyNTU5NzgK"
 }
@@ -133,15 +211,13 @@ Sample response:
 #### Get Logs
 |Item|Description |
 |:--|:--|
-|endpoint| /api/v2/logs/:frameId/:userId|
+|endpoint| `/api/v2/logs/:frameId/:userId`|
 |method | GET|
-|authentication| frame or admin |
-|GET Parameter| `start`: Used when itterating through paginated results |
+|authentication| `ACL_FRAME_OR_ADMIN` |
+|GET Parameter| `start`: Used when iterating through paginated results |
 |GET Parameter| `limit`: max number of results to fetch |
 
-This endpoint will return history logs. If `userId` (fid) is provided
-it will return only logs for that user. Events include frame add/remove,
-notifications enabled/disabled, and notifications sent.
+Returns history logs. If `userId` is provided, returns only logs for that user.
 
 |EvtType|Description |
 |:--|:--|
@@ -160,7 +236,7 @@ Sample response:
 {
   "result": [
     {
-      "frameId": 1,
+      "frameId": "6m4m2",
       "userId": 280,
       "appId": 9152,
       "evtType": 2,
@@ -168,46 +244,43 @@ Sample response:
         "seconds": 1739953487,
         "nanos": 955840000
       }
-    },
-    {
-      "frameId": 1,
-      "userId": 280,
-      "appId": 9152,
-      "evtType": 1,
-      "ctime": {
-        "seconds": 1739953499,
-        "nanos": 487717000
-      }
-    },
-  ...
+    }
   ],
   "next": "bDp1c2VyOjI4MDoyOjE3NDAyNTU5NzgK"
 }
 ```
 
-### Notifications
+### Database
 
-#### Send notification
+#### Get Keys
 |Item|Description |
 |:--|:--|
-|endpoint| /api/v2/notification/:frameId|
-|method | POST|
-|authentication| frame or admin |
-|payload| `{"frameId": frameId, "title": "notif title", "body": "notif body", "url": "notification link"}`|
+|endpoint| `/api/v2/dbkeys/:prefix`|
+|method | GET|
+|authentication| `ACL_ADMIN` |
+|GET Parameter| `start`: Used when iterating through paginated results |
+|GET Parameter| `limit`: max number of results to fetch |
 
-It will send a notification to all subscriebrs of frame `frameId`.
-- `url` must be under the frame domain
-- You can leave `url` empty (""), to link to the frame itself.
-- All users will get the same notification.
+Returns database keys matching the prefix.
 
-It will rerturn the `notificationId` used to send the noitification and the number of notifications
-**attempted** to send.
+### System
 
-Sample response:
+#### Version
+|Item|Description |
+|:--|:--|
+|endpoint| `/api/v2/version`|
+|method | GET|
+|authentication| None |
+|response| `{"version": "1.0.0"}` |
 
-```json
-  {
-    "NotificationId": "12345678-4356-4481-accc-18b3a0b49a2b"
-    "Count" : 3
-  },
-```
+Returns the current Farma version.
+
+#### New Keypair
+|Item|Description |
+|:--|:--|
+|endpoint| `/api/v2/keypair/:frameId`|
+|method | GET|
+|authentication| `ACL_FRAME_OR_ADMIN` |
+|response| `{"private_key": "base64", "public_key": "base64"}` |
+
+Utility endpoint that generates a new keypair. It does not affect the database in any way.
