@@ -1,4 +1,5 @@
 import * as http from "http";
+import * as https from "https";
 import { ed25519 } from "@noble/curves/ed25519";
 import { Base64 } from "js-base64";
 
@@ -7,6 +8,7 @@ class FarmaSDK {
         this.config = {
             hostname: config.hostname || "127.0.0.1",
             port: config.port || 8080,
+            protocol: config.protocol || "http",
             frameId: config.frameId,
             privateKey: config.privateKey,
             // If true, use admin key (frameId = 0)
@@ -62,12 +64,12 @@ class FarmaSDK {
         options.headers["X-Public-Key"] = `${this.config.isAdmin ? "0" : this.config.frameId}:${this.publicKey64}`;
         options.headers["X-Date"] = date;
 
-        console.log(`Making ${method} request to http://${options.hostname}:${options.port}${options.path}`);
+        console.log(`Making ${method} request to ${this.config.protocol}://${options.hostname}:${options.port}${options.path}`);
         console.log('Headers:', options.headers);
         console.log('X-Public-Key:', options.headers["X-Public-Key"]);
 
         return new Promise((resolve, reject) => {
-            const req = http.request(options, (res) => {
+            const req = (this.config.protocol === 'https' ? https : http).request(options, (res) => {
                 console.log(`Response status: ${res.statusCode} ${res.statusMessage}`);
                 console.log('Response headers:', res.headers);
 

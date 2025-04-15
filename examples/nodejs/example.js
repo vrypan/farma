@@ -5,10 +5,11 @@ import FarmaSDK from "./farma-sdk.js";
 const farma = new FarmaSDK({
   hostname: "127.0.0.1",
   port: 8080,
-  frameId: "z0002",
+  protocol: "http", // or "https" for secure connections
+  frameId: "z0001", // Updated to match test frame ID
   // This is a sample 64-byte private key (32 bytes private + 32 bytes public)
   privateKey:
-    "qFew+F/eBNwXOZPiHoiWsFI0B7pTnXBvXTeklCnu8GMaT4EXouj3p1T6PYw8wJzp8Bp2qovZ1wMiH86ABk8qBQ==",
+    "bSyiLSZtM7/WPUOfgmboyaQsgVhJthYDm2PQFOrhm2UMC8KVJAx2udltMK3M020HMdZO69OUcJIBpaX1ylR/fg==",
 });
 
 // Example: Get frame information
@@ -33,7 +34,7 @@ async function sendNotification() {
   try {
     console.log("\n=== Sending notification ===");
     const response = await farma.sendNotification(
-      "z0002", // frameId
+      "z0001", // frameId
       "Test Notification", // title
       "This is a test message", // body
       "https://example.com", // url (optional)
@@ -55,7 +56,7 @@ async function sendNotification() {
 async function getUserLogs() {
   try {
     console.log("\n=== Getting user logs ===");
-    const response = await farma.getUserLogs("z0002");
+    const response = await farma.getUserLogs("z0001", 123);
     console.log("User Logs:", JSON.stringify(response, null, 2));
   } catch (error) {
     console.error("Error getting user logs:", error.message);
@@ -72,7 +73,7 @@ async function getUserLogs() {
 async function getNotifications() {
   try {
     console.log("\n=== Getting notifications ===");
-    const response = await farma.getNotifications("z0002");
+    const response = await farma.getNotifications("z0001");
     console.log("Notifications:", JSON.stringify(response, null, 2));
   } catch (error) {
     console.error("Error getting notifications:", error.message);
@@ -90,9 +91,10 @@ async function adminOperations() {
   const adminFarma = new FarmaSDK({
     hostname: "127.0.0.1",
     port: 8080,
+    protocol: "http", // or "https" for secure connections
     // This is a sample admin key - replace with your actual admin key
     privateKey:
-      "bSyiTSZtM7/WPUOfgmboyaQsgphJthYDm2DQFOrhm2UMC8KVJAx2udltMK3M02PHMdZO69OUcJIBpaX1ylR/fg==",
+      "bSyiLSZtM7/WPUOfgmboyaQsgVhJthYDm2PQFOrhm2UMC8KVJAx2udltMK3M020HMdZO69OUcJIBpaX1ylR/fg==",
     isAdmin: true,
   });
 
@@ -119,13 +121,14 @@ async function adminOperations() {
 async function runExamples() {
   console.log("Starting Farma SDK examples...");
   console.log("Using frame ID:", farma.config.frameId);
-
+  console.log("Using protocol:", farma.config.protocol);
+  
   await getFrameInfo();
   await sendNotification();
   await getUserLogs();
   await getNotifications();
   await adminOperations();
-
+  
   console.log("\nAll examples completed!");
 }
 
