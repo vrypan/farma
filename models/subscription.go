@@ -190,7 +190,7 @@ func SubscriptionsByFrame(frameId string, start []byte, limit int) ([]*Subscript
 
 // Fetch all frame,user subscriptions (all clients). Up to 1000 results.
 func SubscriptionsByFrameUser(frameId string, userId uint64) ([]*Subscription, error) {
-	prefix := fmt.Appendf([]byte(""), "s:id:%s:%d", frameId, userId)
+	prefix := fmt.Appendf([]byte(""), "s:id:%s:%d:", frameId, userId)
 	data, _, err := db.GetPrefixP(prefix, prefix, 1000)
 	if err != nil {
 		return nil, err
