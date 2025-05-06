@@ -81,6 +81,11 @@
     </body>
 <script type="module">
     import { sdk } from 'https://esm.sh/@farcaster/frame-sdk';
+    import { Pingem } from 'https://esm.sh/pingem-sdk';
+    const pingem = new Pingem();
+    await sdk.actions.ready();
+    await pingem.init(sdk, 'farma.vrypan.net'); 
+  
     async function inFrameContext() {
         const links = document.querySelectorAll("a[href^='http']");
         for (let link of links) {
@@ -90,6 +95,7 @@
             });
         }
         await sdk.actions.addFrame();
+        pingem.ping('view');
     }
 
     window.onload = async () => {
