@@ -102,7 +102,7 @@
       try {
         await sdk.actions.ready();
         const ctx = await sdk.context;
-        ctx ? await inFrameContext() : FrameBar();
+        ctx ? await inFrameContext() ;
       } catch (error) {
         console.error(error);
       }
