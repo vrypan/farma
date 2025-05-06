@@ -225,7 +225,7 @@ func H_Notify(c *gin.Context) {
 		// Notify all frame subscribers
 		var start []byte
 		for {
-			subscriptions, next, err := models.SubscriptionsByFrame(requestBody.FrameId, start, 100)
+			subscriptions, next, err := models.SubscriptionsByFrame(requestBody.FrameId, start, 1000)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err})
 				return
@@ -241,7 +241,7 @@ func H_Notify(c *gin.Context) {
 					}
 				}
 			}
-			if len(subscriptions) < 100 {
+			if len(subscriptions) < 1000 {
 				break
 			}
 			start = next

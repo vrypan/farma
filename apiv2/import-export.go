@@ -28,19 +28,29 @@ type ImportData struct {
 func CreateSubscriptionsFromCSV(d ImportData) (int, error) {
 	count := 0
 	for _, entry := range d.data {
+		status := models.SubscriptionStatus_SUBSCRIBED
+		token := entry.notificationToken
+
+		if len(entry.notificationToken) == 0 || entry.notificationToken == "null" {
+			status = models.SubscriptionStatus_UNSUBSCRIBED
+			token = ""
+		}
+
 		subscription := &models.Subscription{
 			FrameId: d.frameId,
 			UserId:  entry.fid,
 			AppId:   d.appId,
-			Status:  models.SubscriptionStatus_SUBSCRIBED,
+			Status:  status,
 			Url:     d.appUrl,
-			Token:   entry.notificationToken,
+			Token:   token,
 		}
+
 		// Assume SaveSubscription is a method to save the subscription in the database
 		if err := subscription.Save(); err != nil {
 			return count, err
 		}
-		count += 1
+
+		count++
 	}
 	return count, nil
 }
