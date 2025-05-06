@@ -138,6 +138,33 @@ Sample response:
 }
 ```
 
+#### Import Subscriptions
+|Item|Description |
+|:--|:--|
+|endpoint| `/api/v2/subscription-import/:frameId`|
+|method | POST|
+|authentication| `ACL_FRAME_OR_ADMIN` |
+|payload| |
+|POST Parameter| `appId`: FID of the application. Default:9152 |
+|POST Parameter| `appUrl`: Notifications endpoint for appId. Default: https://api.warpcast.com/v1/frame-notifications |
+
+Imports a subscriptions from a CSV file. The first two columns must be `fid` and `subscriptionToken`.
+
+Returns the number of subscriptions imported
+
+Sample response:
+
+```json
+{
+  "result":
+    {
+      "entries": 100,
+      "message":"Subscriptions imported successfully",
+    }
+}
+```
+
+
 ### Notifications
 
 #### Send Notification

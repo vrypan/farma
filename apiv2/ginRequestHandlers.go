@@ -2,7 +2,10 @@ package apiv2
 
 import (
 	"encoding/base64"
+	"encoding/csv"
+	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -222,7 +225,7 @@ func H_Notify(c *gin.Context) {
 		// Notify all frame subscribers
 		var start []byte
 		for {
-			subscriptions, next, err := models.SubscriptionsByFrame(requestBody.FrameId, start, 1000)
+			subscriptions, next, err := models.SubscriptionsByFrame(requestBody.FrameId, start, 100)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err})
 				return
@@ -238,7 +241,7 @@ func H_Notify(c *gin.Context) {
 					}
 				}
 			}
-			if len(subscriptions) < 1000 {
+			if len(subscriptions) < 100 {
 				break
 			}
 			start = next
@@ -337,6 +340,87 @@ func debug(c *gin.Context) {
 			"keys":    c.Keys,
 			"headers": c.Request.Header,
 			"params":  c.Params,
+		},
+	})
+}
+
+func H_SubscriptionsImportCSV(c *gin.Context) {
+	if !validateFrameAccess(c) {
+		return
+	}
+
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
+		return
+	}
+
+	frameId := c.Param("frameId")
+	appUrl := c.PostForm("appUrl")
+	if appUrl == "" {
+		appUrl = "https://api.warpcast.com/v1/frame-notifications"
+	}
+	appIdStr := c.PostForm("appId")
+	if appIdStr == "" {
+		appIdStr = "9152"
+	}
+	appId, err := strconv.ParseUint(appIdStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid appId"})
+		return
+	}
+
+	f, err := file.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not open file"})
+		return
+	}
+	defer f.Close()
+
+	reader := csv.NewReader(f)
+	var entries []csvEntry
+
+	for {
+		line, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "could not read CSV line"})
+			return
+		}
+		if line[0] == "fid" {
+			// Skip the header line
+			continue
+		}
+		id, err := strconv.ParseUint(line[0], 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "could not convert CSV line[0] to uint64"})
+			return
+		}
+		entries = append(entries, csvEntry{
+			fid:               id,
+			notificationToken: line[1],
+		})
+	}
+
+	importData := ImportData{
+		frameId: frameId,
+		appId:   appId,
+		appUrl:  appUrl,
+		data:    entries,
+	}
+
+	imported := 0
+	if imported, err = CreateSubscriptionsFromCSV(importData); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed processing file"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"result": gin.H{
+			"message": "Subscriptions imported successfully",
+			"entries": imported,
 		},
 	})
 }

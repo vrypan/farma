@@ -71,6 +71,7 @@ func ginServer(cmd *cobra.Command, args []string) {
 		frameOrAdminGroup.GET("/frame/:frameId", apiv2.H_FramesGet)
 		frameOrAdminGroup.POST("/frame/:frameId", apiv2.H_FrameUpdate)
 		frameOrAdminGroup.GET("/subscription/*frameId", apiv2.H_SubscriptionsGet)
+		frameOrAdminGroup.POST("/subscription-import/:frameId", apiv2.H_SubscriptionsImportCSV)
 		frameOrAdminGroup.GET("/logs/:frameId/*userId", apiv2.H_LogsGet)
 		frameOrAdminGroup.GET("/notification/:frameId", apiv2.H_NotificationsGet)
 		frameOrAdminGroup.GET("/notification/:frameId/:notificationId", apiv2.H_NotificationsGet)
