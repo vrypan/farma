@@ -80,31 +80,28 @@
         </container>
     </body>
 <script type="module">
-   
-   	  import { sdk } from 'https://esm.sh/@farcaster/frame-sdk';
-          import { Pingem } from 'https://esm.sh/pingem-sdk';
-          const pingem = new Pingem();
+    import { sdk } from 'https://esm.sh/@farcaster/frame-sdk';
+    import { Pingem } from 'https://esm.sh/pingem-sdk';
+    const pingem = new Pingem();
 
-          async function updateLinks() {
-            const ctx = await sdk.context;
-            if (!ctx) return;
+    async function updateLinks() {
+        const ctx = await sdk.context;
+        if (!ctx) return;
 
-            document.querySelectorAll("a[href^='http']").forEach((link) => {
-              link.addEventListener("click", (event) => {
+        document.querySelectorAll("a[href^='http']").forEach((link) => {
+            link.addEventListener("click", (event) => {
                 event.preventDefault();
                 sdk.actions.openUrl(link.getAttribute("href"));
-              });
             });
-          }
+        });
+    }
 
-          window.addEventListener('load', async () => {
-
-              await pingem.init(sdk, 'farma.vrypan.net');
-              await sdk.actions.addFrame();
-              await updateLinks();
-              pingem.ping('view');
-
-          });
-   
+    window.addEventListener('load', async () => {
+        await sdk.actions.ready();
+        await pingem.init(sdk, 'farma.vrypan.net');
+        await sdk.actions.addFrame();
+        await updateLinks();
+        pingem.ping('view');
+    });
 </script>
 </html>
