@@ -41,7 +41,7 @@ func (n *Notification) Send() error {
 		batchTokens := tokenKeys[i:end]
 
 		data := map[string]any{
-			"notificationId": fmt.Sprintf("%s/%d", n.Id, batchNumber),
+			"notificationId": n.Id,
 			"title":          n.Title,
 			"body":           n.Message,
 			"targetUrl":      n.Link,
