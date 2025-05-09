@@ -50,7 +50,7 @@ func (sse *SSE) Handler(c *gin.Context) {
 	defer heartbeatTicker.Stop()
 
 	// Create client channel and register it
-	clientChan := make(Client, 10)
+	clientChan := make(Client, 100)
 	sse.clientsMutex.Lock()
 	sse.clients[clientChan] = true
 	sse.clientsMutex.Unlock()
