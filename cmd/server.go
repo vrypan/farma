@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"embed"
 	"log"
 	"net/http"
 	"os"
@@ -19,8 +18,6 @@ import (
 	db "github.com/vrypan/farma/localdb"
 )
 
-var StaticFiles embed.FS
-
 var ginServerCmd = &cobra.Command{
 	Use:   "server",
 	Short: "Start the farma server.",
@@ -31,11 +28,9 @@ func init() {
 	rootCmd.AddCommand(ginServerCmd)
 	ginServerCmd.Flags().StringP("address", "a", "", "Listen on this address/port.")
 	ginServerCmd.Flags().BoolP("verbose", "v", false, "Log additional info.")
-	ginServerCmd.Flags().StringP("test-frame", "t", "", "Path to a directory with a static test frame")
 }
 
 func ginServer(cmd *cobra.Command, args []string) {
-	testFrame, _ := cmd.Flags().GetString("test-frame")
 
 	config.Load()
 	if config.FARMA_VERSION != "" {
@@ -87,11 +82,6 @@ func ginServer(cmd *cobra.Command, args []string) {
 	router.GET("/api/v2/version", apiv2.H_Version)
 	router.GET("/api/v2/new_keypair/:frameId", apiv2.H_NewKeypair)
 	router.POST("/f/:id", apiv2.WebhookHandler(hub))
-
-	if testFrame != "" {
-		router.Static("/test", testFrame)
-		router.Static("/.well-known", testFrame+"/.well-known")
-	}
 
 	server := &http.Server{
 		Addr:    serverAddr,
