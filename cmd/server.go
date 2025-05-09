@@ -1,21 +1,25 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	apiv2 "github.com/vrypan/farma/apiv2"
 	"github.com/vrypan/farma/config"
 	"github.com/vrypan/farma/fctools"
 
 	db "github.com/vrypan/farma/localdb"
+	"github.com/vrypan/farma/models"
 )
 
 var ginServerCmd = &cobra.Command{
@@ -24,10 +28,62 @@ var ginServerCmd = &cobra.Command{
 	Run:   ginServer,
 }
 
+var sseChannel = make(chan *models.UserLog, 100)
+
 func init() {
 	rootCmd.AddCommand(ginServerCmd)
 	ginServerCmd.Flags().StringP("address", "a", "", "Listen on this address/port.")
 	ginServerCmd.Flags().BoolP("verbose", "v", false, "Log additional info.")
+}
+
+// Server Side Events
+func sseHandler(c *gin.Context) {
+	w := c.Writer
+	req := c.Request
+
+	// Set SSE headers
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Last-Event-ID")
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		c.String(http.StatusInternalServerError, "Streaming unsupported")
+		return
+	}
+
+	ctx := req.Context()
+	// Timers
+	heartbeatTicker := time.NewTicker(5 * time.Second)
+	defer heartbeatTicker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("Client disconnected")
+			return
+
+		// Heartbeats
+		case <-heartbeatTicker.C:
+			fmt.Fprint(w, "event: heartbeat\n")
+			fmt.Fprintf(w, "data: %s\n\n", time.Now().Format(time.RFC3339))
+			flusher.Flush()
+
+		// Custom events pushed from /api/ping
+		case log := <-sseChannel:
+
+			sendEvent(w, log)
+			flusher.Flush()
+		}
+	}
+}
+
+func sendEvent(w http.ResponseWriter, log *models.UserLog) {
+	jsonData, _ := protojson.Marshal(log)
+	fmt.Fprintf(w, "id: %s\n", log.Key())
+	fmt.Fprintf(w, "data: %s\n\n", jsonData)
 }
 
 func ginServer(cmd *cobra.Command, args []string) {
@@ -81,7 +137,12 @@ func ginServer(cmd *cobra.Command, args []string) {
 	}
 	router.GET("/api/v2/version", apiv2.H_Version)
 	router.GET("/api/v2/new_keypair/:frameId", apiv2.H_NewKeypair)
-	router.POST("/f/:id", apiv2.WebhookHandler(hub))
+
+	// miniapp webhookUrl handler
+	router.POST("/f/:id", apiv2.WebhookHandler(hub, sseChannel))
+
+	// Server Side Events handler
+	router.GET("/events", sseHandler)
 
 	server := &http.Server{
 		Addr:    serverAddr,
