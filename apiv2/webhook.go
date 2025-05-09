@@ -11,43 +11,37 @@ import (
 	"github.com/vrypan/farma/models"
 )
 
-func isValidPath(path string) bool {
-	matched, _ := regexp.MatchString(`^[\w/-_]*$`, path)
+var validPathRegex = regexp.MustCompile(`^[\w/-_]*$`)
 
-	return matched
+func isValidPath(path string) bool {
+	return validPathRegex.MatchString(path)
 }
 
-func WebhookHandler(hub *fctools.FarcasterHub) gin.HandlerFunc {
+func WebhookHandler(hub *fctools.FarcasterHub, sseChannel chan *models.UserLog) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		//func NotificationsH(c *gin.Context, hub *fctools.FarcasterHub) {
 		// These are public endpoints that can and will be abused.
 		// Let's make sure that HTTP requests are within some reasonable limits.
 		if c.Request.ContentLength > 1024 {
-			c.AbortWithStatus(http.StatusBadRequest)
-			c.String(http.StatusBadRequest, "Content Length > 1024")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Content Length > 1024"})
 			return
 		}
 		if len(c.Request.URL.Path) > 128 {
-			c.AbortWithStatus(http.StatusBadRequest)
-			c.String(http.StatusBadRequest, "Path Length > 128")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Path Length > 128"})
 			return
 		}
 		if !isValidPath(c.Request.URL.Path) {
-			c.AbortWithStatus(http.StatusBadRequest)
-			c.String(http.StatusBadRequest, "Path contains invalid_characters")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Path contains invalid_characters"})
 			return
 		}
 
 		frame := models.NewFrame()
 		if err := frame.FromEndpoint(c.Request.URL.Path); err != nil {
-			c.AbortWithStatus(http.StatusNotFound)
-			c.String(http.StatusNotFound, "Unknown endpoint")
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Unknown endpoint"})
 			return
 		}
 		body, err := io.ReadAll(c.Request.Body)
 		if err != nil {
-			c.AbortWithStatus(http.StatusNoContent)
-			c.String(http.StatusNoContent, "Error reading request body")
+			c.AbortWithStatusJSON(http.StatusNoContent, gin.H{"error": "Error reading request body"})
 			return
 		}
 
@@ -55,10 +49,8 @@ func WebhookHandler(hub *fctools.FarcasterHub) gin.HandlerFunc {
 		subscription.VerifyAppId(hub)
 		subscription.FrameId = frame.Id
 		if err = subscription.Save(); err != nil {
-			log.Println("Error updating db.", err)
-			log.Println("Subscription details:", subscription.NiceString())
-			c.AbortWithStatus(http.StatusInternalServerError)
-			c.String(http.StatusInternalServerError, "Error updating db")
+			log.Printf("Error updating db: %v\nSubscription details: %v", err, subscription.NiceString())
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Error updating db"})
 			return
 		}
 		ulog := models.UserLog{
@@ -69,6 +61,12 @@ func WebhookHandler(hub *fctools.FarcasterHub) gin.HandlerFunc {
 			EvtContext: &models.UserLog_EventContextNone{},
 		}
 		err = ulog.Save()
+		if err != nil {
+			log.Printf("Error saving user log: %v", err)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Error saving user log"})
+			return
+		}
+		sseChannel <- &ulog
 		c.Status(http.StatusOK)
 	}
 }
