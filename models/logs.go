@@ -8,10 +8,12 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+func (l *UserLog) Key() string {
+	return fmt.Sprintf("l:user:%s:%d:%d", l.FrameId, l.UserId, l.Ctime.Seconds)
+}
 func (l *UserLog) Save() error {
-	now := timestamppb.Now()
-	key := fmt.Sprintf("l:user:%s:%d:%d", l.FrameId, l.UserId, now.Seconds)
-	l.Ctime = now
+	l.Ctime = timestamppb.Now()
+	key := l.Key()
 	data, err := proto.Marshal(l)
 	if err != nil {
 		return err
