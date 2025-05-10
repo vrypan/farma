@@ -54,12 +54,31 @@ func WebhookHandler(hub *fctools.FarcasterHub, serverSideEvents *sse.SSE) gin.Ha
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Error updating db"})
 			return
 		}
+
 		ulog := models.UserLog{
-			FrameId:    subscription.FrameId,
-			UserId:     subscription.UserId,
-			AppId:      subscription.AppId,
-			EvtType:    eventType,
-			EvtContext: &models.UserLog_EventContextNone{},
+			FrameId: subscription.FrameId,
+			UserId:  subscription.UserId,
+			AppId:   subscription.AppId,
+			EvtType: eventType,
+			//EvtContext: &models.UserLog_EventContextNone{},
+		}
+		switch eventType {
+		case models.EventType_FRAME_ADDED:
+		case models.EventType_NOTIFICATIONS_ENABLED:
+			subscriptionContext := models.EventContextSubscription{
+				Url:   subscription.Url,
+				Token: subscription.Token,
+			}
+			ulog.EvtContext = &models.UserLog_EventContextSubscription{EventContextSubscription: &subscriptionContext}
+		case models.EventType_FRAME_REMOVED:
+		case models.EventType_NOTIFICATIONS_DISABLED:
+			subscriptionContext := models.EventContextSubscription{
+				Url:   "",
+				Token: "",
+			}
+			ulog.EvtContext = &models.UserLog_EventContextSubscription{EventContextSubscription: &subscriptionContext}
+		default:
+			ulog.EvtContext = &models.UserLog_EventContextNone{}
 		}
 		err = ulog.Save()
 		if err != nil {

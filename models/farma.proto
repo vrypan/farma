@@ -77,6 +77,7 @@ message UserLog {
         EventContextNotification eventContextNotification = 7;
         EventContextOther eventContextOther = 8;
         EventContextNone eventContextNone = 9;
+        EventContextSubscription eventContextSubscription = 10;
     }
 }
 
@@ -89,4 +90,8 @@ message EventContextOther {
     string context = 1;
 }
 message EventContextNone {
+}
+message EventContextSubscription {
+    string url = 1;
+    string token = 2;
 }
