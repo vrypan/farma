@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/vrypan/farma/config"
 	"github.com/vrypan/farma/models"
+	"github.com/vrypan/farma/sse"
 )
 
 // Check that the frameId passed in the parameters match ACCESS_FRAME_ID
@@ -168,120 +169,123 @@ func H_LogsGet(c *gin.Context) {
 	getData(c, prefix, &models.UserLog{})
 }
 
-func H_Notify(c *gin.Context) {
-	if !validateFrameAccess(c) {
-		return
-	}
-	var ver int
-	var err error
-	var requestBody struct {
-		FrameId string   `json:"frameId"`
-		Title   string   `json:"title"`
-		Body    string   `json:"body"`
-		Url     string   `json:"url"`
-		UserIds []uint64 `json:"userIds"`
-	}
-
-	if err := c.ShouldBindJSON(&requestBody); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
-		return
-	}
-
-	frame := models.NewFrame().FromId(requestBody.FrameId)
-	if frame.Id == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "FRAME NOT FOUND"})
-		return
-	}
-
-	if requestBody.Url == "" {
-		requestBody.Url = "https://" + frame.Domain
-	}
-
-	// [url][token][fid]
-	keys := make(map[string]map[string]uint64)
-	// Map notification URLs to Application Ids
-	appUrls := make(map[string]uint64)
-	if len(requestBody.UserIds) > 0 {
-		// Notify only specific subscribers
-		for _, userId := range requestBody.UserIds {
-			subscriptions, err := models.SubscriptionsByFrameUser(requestBody.FrameId, userId)
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err})
-				return
-			}
-			for _, s := range subscriptions {
-				if s.Status == models.SubscriptionStatus_SUBSCRIBED || s.Status == models.SubscriptionStatus_RATE_LIMITED {
-					if url, exists := keys[s.Url]; exists {
-						url[s.Token] = s.UserId
-					} else {
-						keys[s.Url] = make(map[string]uint64)
-						keys[s.Url][s.Token] = s.UserId
-						appUrls[s.Url] = s.AppId
-					}
-				}
-			}
+func H_Notify(serverSideEvents *sse.SSE) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !validateFrameAccess(c) {
+			return
 		}
-	} else {
-		// Notify all frame subscribers
-		var start []byte
-		for {
-			subscriptions, next, err := models.SubscriptionsByFrame(requestBody.FrameId, start, 1000)
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err})
-				return
-			}
-			for _, s := range subscriptions {
-				if s.Status == models.SubscriptionStatus_SUBSCRIBED || s.Status == models.SubscriptionStatus_RATE_LIMITED {
-					if url, exists := keys[s.Url]; exists {
-						url[s.Token] = s.UserId
-					} else {
-						keys[s.Url] = make(map[string]uint64)
-						keys[s.Url][s.Token] = s.UserId
-						appUrls[s.Url] = s.AppId
-					}
-				}
-			}
-			if len(subscriptions) < 1000 {
-				break
-			}
-			start = next
+		var ver int
+		var err error
+		var requestBody struct {
+			FrameId string   `json:"frameId"`
+			Title   string   `json:"title"`
+			Body    string   `json:"body"`
+			Url     string   `json:"url"`
+			UserIds []uint64 `json:"userIds"`
 		}
-	}
 
-	notificationId := ""
-	notificationCount := 0
-	for url, tokens := range keys {
-		// Calling notification.Send() for each client endpoint
-		// One client may have multiple endpoints, and different
-		// clients will have different endpoints.
-		notification := models.NewNotification(
-			requestBody.FrameId,
-			appUrls[url],
-			notificationId,
-			requestBody.Title,
-			requestBody.Body,
-			requestBody.Url,
-			url,
-			keys[url],
-		)
-		notificationId = notification.Id
-		notificationCount += len(tokens)
-		if err := notification.Send(); err != nil {
+		if err := c.ShouldBindJSON(&requestBody); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err})
 			return
 		}
-		ver, err = notification.Update()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+
+		frame := models.NewFrame().FromId(requestBody.FrameId)
+		if frame.Id == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "FRAME NOT FOUND"})
 			return
 		}
-	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"NotificationId":      notificationId,
-		"NotificationVersion": ver,
-		"Count":               notificationCount,
-	})
+		if requestBody.Url == "" {
+			requestBody.Url = "https://" + frame.Domain
+		}
+
+		// [url][token][fid]
+		keys := make(map[string]map[string]uint64)
+		// Map notification URLs to Application Ids
+		appUrls := make(map[string]uint64)
+		if len(requestBody.UserIds) > 0 {
+			// Notify only specific subscribers
+			for _, userId := range requestBody.UserIds {
+				subscriptions, err := models.SubscriptionsByFrameUser(requestBody.FrameId, userId)
+				if err != nil {
+					c.JSON(http.StatusBadRequest, gin.H{"error": err})
+					return
+				}
+				for _, s := range subscriptions {
+					if s.Status == models.SubscriptionStatus_SUBSCRIBED || s.Status == models.SubscriptionStatus_RATE_LIMITED {
+						if url, exists := keys[s.Url]; exists {
+							url[s.Token] = s.UserId
+						} else {
+							keys[s.Url] = make(map[string]uint64)
+							keys[s.Url][s.Token] = s.UserId
+							appUrls[s.Url] = s.AppId
+						}
+					}
+				}
+			}
+		} else {
+			// Notify all frame subscribers
+			var start []byte
+			for {
+				subscriptions, next, err := models.SubscriptionsByFrame(requestBody.FrameId, start, 1000)
+				if err != nil {
+					c.JSON(http.StatusBadRequest, gin.H{"error": err})
+					return
+				}
+				for _, s := range subscriptions {
+					if s.Status == models.SubscriptionStatus_SUBSCRIBED || s.Status == models.SubscriptionStatus_RATE_LIMITED {
+						if url, exists := keys[s.Url]; exists {
+							url[s.Token] = s.UserId
+						} else {
+							keys[s.Url] = make(map[string]uint64)
+							keys[s.Url][s.Token] = s.UserId
+							appUrls[s.Url] = s.AppId
+						}
+					}
+				}
+				if len(subscriptions) < 1000 {
+					break
+				}
+				start = next
+			}
+		}
+
+		notificationId := ""
+		notificationCount := 0
+		for url, tokens := range keys {
+			// Calling notification.Send() for each client endpoint
+			// One client may have multiple endpoints, and different
+			// clients will have different endpoints.
+			notification := models.NewNotification(
+				requestBody.FrameId,
+				appUrls[url],
+				notificationId,
+				requestBody.Title,
+				requestBody.Body,
+				requestBody.Url,
+				url,
+				keys[url],
+			)
+			notificationId = notification.Id
+			notificationCount += len(tokens)
+			if err := notification.Send(); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err})
+				return
+			}
+			ver, err = notification.Update()
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+				return
+			}
+			serverSideEvents.Broadcast(notification)
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"NotificationId":      notificationId,
+			"NotificationVersion": ver,
+			"Count":               notificationCount,
+		})
+	}
 }
 
 // DONE

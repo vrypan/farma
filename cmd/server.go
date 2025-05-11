@@ -73,7 +73,7 @@ func ginServer(cmd *cobra.Command, args []string) {
 		frameOrAdminGroup.GET("/logs/:frameId/*userId", apiv2.H_LogsGet)
 		frameOrAdminGroup.GET("/notification/:frameId", apiv2.H_NotificationsGet)
 		frameOrAdminGroup.GET("/notification/:frameId/:notificationId", apiv2.H_NotificationsGet)
-		frameOrAdminGroup.POST("/notification/:frameId", apiv2.H_Notify)
+		frameOrAdminGroup.POST("/notification/:frameId", apiv2.H_Notify(serverSideEvents))
 	}
 	onlyAdminGroup := router.Group("/api/v2", apiv2.VerifySignature(apiv2.ACL_ADMIN))
 	{
