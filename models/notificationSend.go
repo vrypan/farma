@@ -93,9 +93,10 @@ func (n *Notification) Send() error {
 		n.RateLimitedTokens = append(n.RateLimitedTokens, responseBody.Result.RateLimitedTokens...)
 	}
 
-	context := EventContextNotification{Id: n.Id, Version: *n.Version}
+	//context := EventContextNotification{Id: n.Id, Version: *n.Version}
 	for _, token := range n.SuccessTokens {
 		subscription := NewSubscription().FromKey(n.FrameId, n.Tokens[token], n.AppId)
+		context := EventContextNotification{Id: n.Id, Version: *n.Version, Token: token}
 		l := UserLog{
 			FrameId:    subscription.FrameId,
 			UserId:     subscription.UserId,
@@ -109,6 +110,7 @@ func (n *Notification) Send() error {
 		}
 	}
 	for _, token := range n.FailedTokens {
+		context := EventContextNotification{Id: n.Id, Version: *n.Version, Token: token}
 		subscription := NewSubscription().FromKey(n.FrameId, n.Tokens[token], n.AppId)
 		l := UserLog{
 			FrameId:    subscription.FrameId,
@@ -126,6 +128,7 @@ func (n *Notification) Send() error {
 		subscription.Save()
 	}
 	for _, token := range n.ServerErrorTokens {
+		context := EventContextNotification{Id: n.Id, Version: *n.Version, Token: token}
 		subscription := NewSubscription().FromKey(n.FrameId, n.Tokens[token], n.AppId)
 		l := UserLog{
 			FrameId:    subscription.FrameId,
@@ -140,6 +143,7 @@ func (n *Notification) Send() error {
 		}
 	}
 	for _, token := range n.RateLimitedTokens {
+		context := EventContextNotification{Id: n.Id, Version: *n.Version, Token: token}
 		subscription := NewSubscription().FromKey(n.FrameId, n.Tokens[token], n.AppId)
 		l := UserLog{
 			FrameId:    subscription.FrameId,
