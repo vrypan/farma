@@ -8,11 +8,15 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/vrypan/farma/models"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
-type Client chan *models.UserLog
+type Event interface {
+	Key() string
+	Json() []byte
+	Type() string
+}
+
+type Client chan Event
 
 type SSE struct {
 	clients      map[Client]bool
@@ -82,13 +86,13 @@ func (sse *SSE) Handler(c *gin.Context) {
 	}
 }
 
-func sendEvent(w http.ResponseWriter, event *models.UserLog) {
-	jsonData, _ := protojson.Marshal(event)
+func sendEvent(w http.ResponseWriter, event Event) {
+	fmt.Fprintf(w, "event: %s\n", event.Type())
 	fmt.Fprintf(w, "id: %s\n", event.Key())
-	fmt.Fprintf(w, "data: %s\n\n", jsonData)
+	fmt.Fprintf(w, "data: %s\n\n", event.Json())
 }
 
-func (sse *SSE) Broadcast(evt *models.UserLog) {
+func (sse *SSE) Broadcast(evt Event) {
 	sse.clientsMutex.Lock()
 	defer sse.clientsMutex.Unlock()
 	for client := range sse.clients {
