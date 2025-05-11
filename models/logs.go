@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	db "github.com/vrypan/farma/localdb"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -11,6 +12,17 @@ import (
 func (l *UserLog) Key() string {
 	return fmt.Sprintf("l:user:%s:%d:%d", l.FrameId, l.UserId, l.Ctime.Seconds)
 }
+func (l *UserLog) Json() []byte {
+	json, err := protojson.Marshal(l)
+	if err != nil {
+		return nil
+	}
+	return json
+}
+func (l *UserLog) Type() string {
+	return "UserLog"
+}
+
 func (l *UserLog) Save() error {
 	l.Ctime = timestamppb.Now()
 	key := l.Key()
