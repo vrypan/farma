@@ -80,7 +80,6 @@ message UserLog {
         EventContextSubscription eventContextSubscription = 10;
     }
 }
-
 message EventContextNotification {
     string id = 1;
     uint64 version = 2;
@@ -94,4 +93,21 @@ message EventContextNone {
 message EventContextSubscription {
     string url = 1;
     string token = 2;
+}
+
+// NotificationLog is not stored in localdb
+// but it is used with natsclient.
+message NotificationLog {
+    string frameId = 1;
+    string id = 2;
+    string endpoint = 3;
+    string title = 4;
+    string message = 5;
+    string link = 6;
+    google.protobuf.Timestamp ctime = 7;
+    uint64 appId = 8;
+    repeated string successTokens = 9;
+    repeated string invalidTokens = 10;
+    repeated string rateLimitedTokens = 11;
+    repeated string serverErrorTokens = 12;
 }

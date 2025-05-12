@@ -9,7 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/vrypan/farma/fctools"
 	"github.com/vrypan/farma/models"
-	"github.com/vrypan/farma/sse"
 )
 
 var validPathRegex = regexp.MustCompile(`^[\w/-_]*$`)
@@ -18,7 +17,7 @@ func isValidPath(path string) bool {
 	return validPathRegex.MatchString(path)
 }
 
-func WebhookHandler(hub *fctools.FarcasterHub, serverSideEvents *sse.SSE) gin.HandlerFunc {
+func WebhookHandler(hub *fctools.FarcasterHub) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// These are public endpoints that can and will be abused.
 		// Let's make sure that HTTP requests are within some reasonable limits.
@@ -60,18 +59,15 @@ func WebhookHandler(hub *fctools.FarcasterHub, serverSideEvents *sse.SSE) gin.Ha
 			UserId:  subscription.UserId,
 			AppId:   subscription.AppId,
 			EvtType: eventType,
-			//EvtContext: &models.UserLog_EventContextNone{},
 		}
 		switch eventType {
-		case models.EventType_FRAME_ADDED:
-		case models.EventType_NOTIFICATIONS_ENABLED:
+		case models.EventType_FRAME_ADDED, models.EventType_NOTIFICATIONS_ENABLED:
 			subscriptionContext := models.EventContextSubscription{
 				Url:   subscription.Url,
 				Token: subscription.Token,
 			}
 			ulog.EvtContext = &models.UserLog_EventContextSubscription{EventContextSubscription: &subscriptionContext}
-		case models.EventType_FRAME_REMOVED:
-		case models.EventType_NOTIFICATIONS_DISABLED:
+		case models.EventType_FRAME_REMOVED, models.EventType_NOTIFICATIONS_DISABLED:
 			subscriptionContext := models.EventContextSubscription{
 				Url:   "",
 				Token: "",
@@ -86,7 +82,6 @@ func WebhookHandler(hub *fctools.FarcasterHub, serverSideEvents *sse.SSE) gin.Ha
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Error saving user log"})
 			return
 		}
-		serverSideEvents.Broadcast(&ulog)
 		c.Status(http.StatusOK)
 	}
 }

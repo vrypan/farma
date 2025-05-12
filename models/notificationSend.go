@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/vrypan/farma/natsclient"
 )
 
 var requestBody struct {
@@ -14,10 +16,6 @@ var requestBody struct {
 	Body    string   `json:"body"`
 	Url     string   `json:"url"`
 	UserIds []uint64 `json:"userIds"`
-}
-
-func PrepareNotification() {
-
 }
 
 func (n *Notification) Send() error {
@@ -60,37 +58,60 @@ func (n *Notification) Send() error {
 		request.Header.Set("Content-Type", "application/json")
 
 		response, err := http.DefaultClient.Do(request)
+		var serverErrorTokens []string
 		if err != nil {
-			n.ServerErrorTokens = append(n.FailedTokens, batchTokens...)
+			serverErrorTokens = batchTokens
 			continue
 		}
 		defer response.Body.Close()
 
 		if response.StatusCode != http.StatusOK {
-			n.ServerErrorTokens = append(n.FailedTokens, batchTokens...)
+			serverErrorTokens = batchTokens
 			continue
 		}
 
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
-			return fmt.Errorf("Error reading response body: %w", err)
+		n.ServerErrorTokens = append(n.FailedTokens, serverErrorTokens...)
+		notificationLog := NotificationLog{
+			FrameId:           n.FrameId,
+			Id:                n.Id,
+			Endpoint:          n.Endpoint,
+			Title:             n.Title,
+			Message:           n.Message,
+			Link:              n.Link,
+			Ctime:             n.Ctime,
+			AppId:             n.AppId,
+			ServerErrorTokens: serverErrorTokens,
 		}
 
-		// Parse response body and record the status of each token
-		var responseBody struct {
-			Result struct {
-				SuccessfulTokens  []string `json:"successfulTokens"`
-				InvalidTokens     []string `json:"invalidTokens"`
-				RateLimitedTokens []string `json:"rateLimitedTokens"`
-			} `json:"result"`
+		if len(serverErrorTokens) == 0 {
+			bodyBytes, err := io.ReadAll(response.Body)
+			if err != nil {
+				return fmt.Errorf("Error reading response body: %w", err)
+			}
+
+			// Parse response body and record the status of each token
+			var responseBody struct {
+				Result struct {
+					SuccessfulTokens  []string `json:"successfulTokens"`
+					InvalidTokens     []string `json:"invalidTokens"`
+					RateLimitedTokens []string `json:"rateLimitedTokens"`
+				} `json:"result"`
+			}
+			err = json.Unmarshal(bodyBytes, &responseBody)
+			if err != nil {
+				return fmt.Errorf("Error unmarshalling response body: %w", err)
+			}
+			n.SuccessTokens = append(n.SuccessTokens, responseBody.Result.SuccessfulTokens...)
+			n.FailedTokens = append(n.FailedTokens, responseBody.Result.InvalidTokens...)
+			n.RateLimitedTokens = append(n.RateLimitedTokens, responseBody.Result.RateLimitedTokens...)
+
+			notificationLog.SuccessTokens = responseBody.Result.SuccessfulTokens
+			notificationLog.InvalidTokens = responseBody.Result.InvalidTokens
+			notificationLog.RateLimitedTokens = responseBody.Result.RateLimitedTokens
+
+			natsclient.Publish(&notificationLog)
 		}
-		err = json.Unmarshal(bodyBytes, &responseBody)
-		if err != nil {
-			return fmt.Errorf("Error unmarshalling response body: %w", err)
-		}
-		n.SuccessTokens = append(n.SuccessTokens, responseBody.Result.SuccessfulTokens...)
-		n.FailedTokens = append(n.FailedTokens, responseBody.Result.InvalidTokens...)
-		n.RateLimitedTokens = append(n.RateLimitedTokens, responseBody.Result.RateLimitedTokens...)
+
 	}
 
 	//context := EventContextNotification{Id: n.Id, Version: *n.Version}

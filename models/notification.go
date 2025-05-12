@@ -46,7 +46,7 @@ func (n *Notification) Json() []byte {
 	return json
 }
 func (n *Notification) Type() string {
-	return "Notification"
+	return "notification"
 }
 
 func (n *Notification) Prefix() string {

@@ -9,12 +9,13 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/nats-io/nats.go"
 	"github.com/spf13/cobra"
 
 	apiv2 "github.com/vrypan/farma/apiv2"
 	"github.com/vrypan/farma/config"
 	"github.com/vrypan/farma/fctools"
-	"github.com/vrypan/farma/sse"
+	"github.com/vrypan/farma/natsclient"
 
 	db "github.com/vrypan/farma/localdb"
 )
@@ -29,6 +30,7 @@ func init() {
 	rootCmd.AddCommand(ginServerCmd)
 	ginServerCmd.Flags().StringP("address", "a", "", "Listen on this address/port.")
 	ginServerCmd.Flags().BoolP("verbose", "v", false, "Log additional info.")
+	ginServerCmd.Flags().Bool("nats", false, "Send events to NATS")
 }
 
 func ginServer(cmd *cobra.Command, args []string) {
@@ -43,10 +45,23 @@ func ginServer(cmd *cobra.Command, args []string) {
 	}
 	defer db.Close()
 
+	enableNats, _ := cmd.Flags().GetBool("nats")
+	if enableNats {
+		uri := config.GetString("nats.uri")
+		user := config.GetString("nats.user")
+		pass := config.GetString("nats.pass")
+		err = natsclient.Connect(
+			uri, nats.UserInfo(user, pass),
+		)
+		if err != nil {
+			log.Fatalf("Error configuring NATS: %v", err)
+		}
+		log.Printf("NATS enabled: %s\n", uri)
+		defer natsclient.Conn().Drain()
+	}
+
 	hub := fctools.NewFarcasterHub()
 	defer hub.Close()
-
-	serverSideEvents := sse.Init()
 
 	serverAddr := config.GetString("host.addr")
 	if a, _ := cmd.Flags().GetString("address"); a != "" {
@@ -73,7 +88,7 @@ func ginServer(cmd *cobra.Command, args []string) {
 		frameOrAdminGroup.GET("/logs/:frameId/*userId", apiv2.H_LogsGet)
 		frameOrAdminGroup.GET("/notification/:frameId", apiv2.H_NotificationsGet)
 		frameOrAdminGroup.GET("/notification/:frameId/:notificationId", apiv2.H_NotificationsGet)
-		frameOrAdminGroup.POST("/notification/:frameId", apiv2.H_Notify(serverSideEvents))
+		frameOrAdminGroup.POST("/notification/:frameId", apiv2.H_Notify)
 	}
 	onlyAdminGroup := router.Group("/api/v2", apiv2.VerifySignature(apiv2.ACL_ADMIN))
 	{
@@ -86,10 +101,7 @@ func ginServer(cmd *cobra.Command, args []string) {
 	router.GET("/api/v2/new_keypair/:frameId", apiv2.H_NewKeypair)
 
 	// miniapp webhookUrl handler
-	router.POST("/f/:id", apiv2.WebhookHandler(hub, serverSideEvents))
-
-	// Server Side Events handler
-	router.GET("/events", serverSideEvents.Handler)
+	router.POST("/f/:id", apiv2.WebhookHandler(hub))
 
 	server := &http.Server{
 		Addr:    serverAddr,
